@@ -35,8 +35,6 @@ my $xor_bytes = sub {
     $rhs = shift;
     my @lhs = split("", $lhs);
     my @rhs = split("", $rhs);
-    for (my $i = 0; $i < scalar(@rhs); $i += 1) {
-    } # for
     return join "", map {
         chr(ord($rhs[$_]) ^ ord($lhs[$_]));
     } 0..scalar(@rhs) - 1;
