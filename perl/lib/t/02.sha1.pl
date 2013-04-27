@@ -11,6 +11,7 @@ sub test_sha1 {
     my $dst  = shift;
 
     my $ret = eqs_crypto_sha1($src);
+    $ret = join("", map { sprintf("%02x", ord($_)) } split("", $ret));
     my $check = $ret eq $dst;
     print "$case: [$dst] [$ret] $check\n";
 } # test_sha1
@@ -34,3 +35,17 @@ test_sha1("sha1_65_chars", "A" x 65, "826b7e7a7af8a529ae1c7443c23bf185c0ad440c")
 test_sha1("sha1_66_chars", "B" x 66, "af2a537bf42a6e2393eaa71f0b203a3b3f0f7ec0");
 test_sha1("sha1_67_chars", "C" x 67, "a78a3e18cfbcf38dc30f175097940301b03d17ac");
 test_sha1("sha1_68_chars", "D" x 68, "3999ef9ace5826a444579949aa0e6f1c39318459");
+
+my $sha1 = Qiniu::Utils::SHA1->new();
+my $dst1 = $sha1->sum("");
+my $dst2 = $sha1->reset()->sum("");
+$dst1 = join("", map { sprintf("%02x", ord($_)) } split("", $dst1));
+$dst2 = join("", map { sprintf("%02x", ord($_)) } split("", $dst2));
+my $check = $dst1 eq $dst2;
+print "sha1_reset: [$dst1] [$dst2] $check\n";
+
+$dst1 = $sha1->reset()->write("a")->sum("bc");
+$dst2 = "a9993e364706816aba3e25717850c26c9cd0d89d";
+$dst1 = join("", map { sprintf("%02x", ord($_)) } split("", $dst1));
+$check = $dst1 eq $dst2;
+print "sha1_write_sum: [$dst1] [$dst2] $check\n";

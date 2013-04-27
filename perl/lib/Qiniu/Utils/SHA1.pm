@@ -23,10 +23,9 @@ our @EXPORT = qw(
 );
 
 sub eqs_crypto_sha1 {
-    my $data = shift;
+    my $msg = shift;
     my $sha1 = __PACKAGE__->new();
-    $sha1->write($data);
-    return $sha1->sum();
+    return $sha1->sum($msg);
 } ## eqs_crypto_sha1
 
 use constant CHUNK_SIZE   => 64;
@@ -50,9 +49,9 @@ my $mod_add = sub {
 
 my $calc = sub {
     my $self = shift;
-    my $data = shift;
+    my $msg  = shift;
 
-    my @w = unpack("N" x 16, $data);
+    my @w = unpack("N" x 16, $msg);
     for (my $i = 16; $i < 80; $i += 1) {
         $w[$i] = $left_rotate->(
             ($w[$i-3] ^ $w[$i-8] ^ $w[$i-14] ^ $w[$i-16]),
@@ -108,47 +107,46 @@ my $calc = sub {
 
 sub new {
     my $class = shift || __PACKAGE__;
-    my $self = {
-        origin_len => 0,
-        remainder  => "",
-        hash       => [
-            0x67452301,
-            0xEFCDAB89,
-            0x98BADCFE,
-            0x10325476,
-            0xC3D2E1F0,
-        ],
-    };
-    return bless $self, $class;
+    my $self = {};
+    bless $self, $class;
+    $self->reset();
+    return $self;
 } # new
 
 sub write {
     my $self = shift;
-    my $data = shift;
+    my $msg  = shift;
 
-    if (not defined($data) or ref($data) ne q{}) {
+    if (not defined($msg) or ref($msg) ne q{}) {
         return;
     }
 
-    $self->{origin_len} += length($data);
-    $data = $self->{remainder} . $data;
+    $self->{origin_len} += length($msg);
+    $msg = $self->{remainder} . $msg;
     $self->{remainder} = "";
 
-    my $data_len = length($data);
+    my $data_len = length($msg);
+    if ($data_len < CHUNK_SIZE) {
+        $self->{remainder} = $msg;
+        return $self;
+    }
+
     for (my $pos = 0; $pos < $data_len; $pos += CHUNK_SIZE) {
         if ($data_len - $pos < CHUNK_SIZE) {
-            $self->{remainder} = substr($data, $pos);
+            $self->{remainder} = substr($msg, $pos);
             last;
         }
-        $self->$calc(substr($data, $pos, CHUNK_SIZE));
+        $self->$calc(substr($msg, $pos, CHUNK_SIZE));
     } # for
+
+    return $self;
 } # write
 
 sub sum {
     my $self = shift;
-    my $data = shift;
+    my $msg  = shift;
 
-    $self->write($data);
+    $self->write($msg);
     my $last_data = $self->{remainder} . MSG_PADDING;
 
     if (CHUNK_SIZE < (length($self->{remainder}) + 1 + 8)) {
@@ -162,8 +160,27 @@ sub sum {
     $last_data .= pack("N", ($origin_bits_len >> 32) & 0xFFFFFFFF);
     $last_data .= pack("N", $origin_bits_len & 0xFFFFFFFF);
     $self->$calc($last_data);
-    return join("", map { sprintf("%08x", $_) } @{$self->{hash}});
+    return join("", map { pack("N", $_) } @{$self->{hash}});
 } # sum
+
+sub reset {
+    my $self = shift;
+    $self->{origin_len} = 0;
+    $self->{remainder}  = "";
+
+    $self->{hash} = [
+        0x67452301,
+        0xEFCDAB89,
+        0x98BADCFE,
+        0x10325476,
+        0xC3D2E1F0,
+    ];
+    return $self;
+} # reset
+
+sub chunk_size {
+    return CHUNK_SIZE;
+} # chunk_size
 
 1;
 
