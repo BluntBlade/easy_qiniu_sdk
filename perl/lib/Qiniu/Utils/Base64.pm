@@ -92,6 +92,11 @@ my $encode_impl = sub {
     return $ret, $padding_len;
 }; # encode_impl
 
+use constant FIRST  => 1;
+use constant SECOND => 2;
+use constant THIRD  => 3;
+use constant FOURTH => 4;
+
 my $decode_impl = sub {
     my $buf = shift;
     my $map = shift;
@@ -102,8 +107,40 @@ my $decode_impl = sub {
 
     my $buf_len = scalar(@$buf);
     if ($buf_len == 0) {
-        return "", 0;
+        return "";
     }
+
+    my $state = FIRST;
+    my $chr = 0;
+    my $ret = "";
+    foreach my $code (@$buf) {
+        my $val = $map->{$code};
+        if ($state == FIRST) {
+            $chr = ($val & 0x3F) << 2;
+            $state = SECOND;
+            next;
+        }
+        if ($state == SECOND) {
+            $chr |= ($val & 0x30) >> 4;
+            $ret .= chr($chr);
+            $chr = ($val & 0xF) << 4;
+            $state = THIRD;
+            next;
+        }
+        if ($state == THIRD) {
+            $chr |= ($val & 0x3C) >> 2;
+            $ret .= chr($chr);
+            $chr = ($val & 0x3) << 6;
+            $state = FOURTH;
+            next;
+        };
+
+        $chr |= ($val & 0x3F);
+        $ret .= chr($chr);
+        $state = FIRST;
+    } # foreach
+
+    return $ret;
 }; # decode_impl
 
 use constant ENCODE_MIME_MAP => [
@@ -135,6 +172,13 @@ use constant DECODE_MIME_MAP => {
     "8" => 60, "9" => 61, "+" => 62, "/" => 63,
 };
 
+sub decode_mime {
+    my $buf = shift;
+    $buf =~ s/[=]+$//;
+    $buf =~ s/\r\n//g;
+    return $decode_impl->($buf, DECODE_MIME_MAP);
+} # decode_mime
+
 use constant ENCODE_URL_MAP => [
     qw{A B C D E F G H I J K L M N O P Q R S T U V W X Y Z},
     qw{a b c d e f g h i j k l m n o p q r s t u v w x y z},
@@ -146,6 +190,25 @@ sub encode_url {
     my $buf = shift;
     return $encode_impl->($buf, ENCODE_URL_MAP);
 } # encode_url
+
+use constant DECODE_URL_MAP => {
+    "A" => 0,  "B" => 1,  "C" => 2,  "D" => 3,  "E" => 4,  "F" => 5,
+    "G" => 6,  "H" => 7,  "I" => 8,  "J" => 9,  "K" => 10, "L" => 11,
+    "M" => 12, "N" => 13, "O" => 14, "P" => 15, "Q" => 16, "R" => 17,
+    "S" => 18, "T" => 19, "U" => 20, "V" => 21, "W" => 22, "X" => 23,
+    "Y" => 24, "Z" => 25, "a" => 26, "b" => 27, "c" => 28, "d" => 29,
+    "e" => 30, "f" => 31, "g" => 32, "h" => 33, "i" => 34, "j" => 35,
+    "k" => 36, "l" => 37, "m" => 38, "n" => 39, "o" => 40, "p" => 41,
+    "q" => 42, "r" => 43, "s" => 44, "t" => 45, "u" => 46, "v" => 47,
+    "w" => 48, "x" => 49, "y" => 50, "z" => 51, "0" => 52, "1" => 53,
+    "2" => 54, "3" => 55, "4" => 56, "5" => 57, "6" => 58, "7" => 59,
+    "8" => 60, "9" => 61, "-" => 62, "_" => 63,
+};
+
+sub decode_url {
+    my $buf = shift;
+    return $decode_impl->($buf, DECODE_URL_MAP);
+} # decode_url
 
 1;
 
