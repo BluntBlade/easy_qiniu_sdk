@@ -45,7 +45,7 @@ sub sign {
     my $secret_key = shift;
     my $buf        = shift;
 
-    my $encoded_buf = Qiniu::Utils::Base64::url_encode($buf);
+    my $encoded_buf = Qiniu::Utils::Base64::encode_url($buf);
     my $hmac = Qiniu::Utils::HMAC->new(
         Qiniu::Utils::SHA1->new(),
         $secret_key
@@ -53,7 +53,7 @@ sub sign {
 
     $hmac->write($encoded_buf);
     my $digest = $hmac->sum();
-    my $encoded_digest = Qiniu::Utils::Base64::url_encode($digest);
+    my $encoded_digest = Qiniu::Utils::Base64::encode_url($digest);
 
     return "${access_key}:${encoded_digest}:${encoded_buf}";
 } # sign
