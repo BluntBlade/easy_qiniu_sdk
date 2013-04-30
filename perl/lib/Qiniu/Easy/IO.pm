@@ -34,42 +34,42 @@ sub put {
 
     $err = $multipart->field("auth", $args->{uptoken});
     if (defined($err)) {
-        return $err;
+        return undef, $err;
     }
 
-    my $action = '/rs-put/' \
-               . Qiniu::Utils::Base64::encode_url(
+    my $action = '/rs-put/' .
+                 Qiniu::Utils::Base64::encode_url(
                      "$args->{bucket}:$args->{key}"
                  );
     if (defined($args->{mime_type}) && $args->{mime_type} ne q{}) {
-        $action .= '/mimeType/' \
-                 . Qiniu::Utils::Base64::encode_url(
+        $action .= '/mimeType/' .
+                   Qiniu::Utils::Base64::encode_url(
                        $args->{mime_type}
                    );
     }
     if (defined($args->{custom_meta}) && $args->{custom_meta} ne q{}) {
-        $action .= '/meta/' \
-                 . Qiniu::Utils::Base64::encode_url(
+        $action .= '/meta/' .
+                   Qiniu::Utils::Base64::encode_url(
                        $args->{custom_meta}
                    );
     }
     $err = $multipart->field('action', $action);
     if (defined($err)) {
-        return $err;
+        return undef, $err;
     }
 
     if (defined($args->{callback_params}) &&
         $args->{callback_params} ne q{}) {
         $err = $multipart->field('params', $args->{callback_params});
         if (defined($err)) {
-            return $err;
+            return undef, $err;
         }
     }
 
     my $buf = undef;
     ($buf, $err) = $multipart->form_file('file', $args->{key});
     if (defined($err)) {
-        return $err;
+        return undef, $err;
     }
     
     my $source = {
@@ -88,12 +88,13 @@ sub put {
         },
     };
 
-    Qiniu::Utils::HTTPClient::post(
+    my $ret = undef;
+    ($ret, $err) = Qiniu::Utils::HTTPClient::post(
         Qiniu::Easy::Conf::UP_HOST . '/upload',
         $multipart->content_type(),
         $source
     );
-    return $err;
+    return $ret, $err;
 } # put
 
 sub put_file {
