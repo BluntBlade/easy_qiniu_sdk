@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 ##############################################################################
 #
 # Easy Qiniu Perl SDK
@@ -28,11 +30,11 @@ use Qiniu::Utils::HMAC;
 use Qiniu::Utils::SHA1;
 
 sub eqs_rs_sign {
-    return &__PACKAGE__::sign;
+    return &sign;
 } # eqs_rs_sign
 
 sub eqs_rs_sign_json {
-    return &__PACKAGE__::sign_json;
+    return &sign_json;
 } # eqs_rs_sign_json
 
 # Qiniu authorization sign (count in Bytes)
@@ -55,7 +57,7 @@ sub sign {
     my $digest = $hmac->sum();
     my $encoded_digest = Qiniu::Utils::Base64::encode_url($digest);
 
-    return "${access_key}:${encoded_digest}:${encoded_buf}";
+    return "${access_key}:${encoded_digest}:${encoded_buf}", undef;
 } # sign
 
 sub sign_json {

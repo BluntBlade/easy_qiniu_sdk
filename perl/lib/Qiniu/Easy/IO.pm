@@ -30,25 +30,10 @@ sub put {
     my $args = shift;
 
     ######
-    my $uptoken = $args->{uptoken};
-    if (not defined($uptoken) or $uptoken eq q{}) {
-        return undef, q{Invalid uptoken};
-    }
-
-    my $bucket = $args->{bucket};
-    if (not defined($bucket) or $bucket eq q{}) {
-        return undef, q{Invalid bucket};
-    }
-
-    my $key = $args->{key};
-    if (not defined($key) or $key eq q{}) {
-        return undef, q{Invalid key};
-    }
-
-    my $data = $args->{data};
-    if (not defined($data) or $data eq q{}) {
-        return undef, q{Invalid data};
-    }
+    my $uptoken = "$args->{uptoken}";
+    my $bucket  = "$args->{bucket}";
+    my $key     = "$args->{key}";
+    my $data    = $args->{data};
 
     my $mt     = $args->{mime_type}       || $args->{mimeType};
     my $meta   = $args->{custom_meta}     || $args->{customMeta};
@@ -122,8 +107,7 @@ sub put {
 sub put_file {
     my $args = shift;
 
-    my $fh = undef;
-    my $err = open($fh, "<", $args->{local_file});
+    my $err = open(my $fh, "<", $args->{local_file});
     if (not defined($err)) {
         return undef, "$OS_ERROR";
     }
