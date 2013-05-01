@@ -29,52 +29,75 @@ use Qiniu::Easy::Conf;
 sub put {
     my $args = shift;
 
+    ######
+    my $uptoken = $args->{uptoken};
+    if (not defined($uptoken) or $uptoken eq q{}) {
+        return undef, q{Invalid uptoken};
+    }
+
+    my $bucket = $args->{bucket};
+    if (not defined($bucket) or $bucket eq q{}) {
+        return undef, q{Invalid bucket};
+    }
+
+    my $key = $args->{key};
+    if (not defined($key) or $key eq q{}) {
+        return undef, q{Invalid key};
+    }
+
+    my $data = $args->{data};
+    if (not defined($data) or $data eq q{}) {
+        return undef, q{Invalid data};
+    }
+
+    my $mt     = $args->{mime_type}       || $args->{mimeType};
+    my $meta   = $args->{custom_meta}     || $args->{customMeta};
+    my $params = $args->{callback_params} || $args->{callbackParams};
+
+    ######
     my $err       = undef;
     my $multipart = Qiniu::Utils::MIME::Multipart->new();
 
-    $err = $multipart->field("auth", $args->{uptoken});
+    ###
+    $err = $multipart->field("auth", $uptoken);
     if (defined($err)) {
         return undef, $err;
     }
 
-    my $action = '/rs-put/' .
-                 Qiniu::Utils::Base64::encode_url(
-                     "$args->{bucket}:$args->{key}"
-                 );
-    if (defined($args->{mime_type}) && $args->{mime_type} ne q{}) {
-        $action .= '/mimeType/' .
-                   Qiniu::Utils::Base64::encode_url(
-                       $args->{mime_type}
-                   );
+    ###
+    my $id = Qiniu::Utils::Base64::encode_url("$bucket:$key");
+    my $action = "/rs-put/${id}";
+
+    if (defined($mt) && $mt ne q{}) {
+        my $mt = Qiniu::Utils::Base64::encode_url($mt);
+        $action .= "/mimeType/${mt}";
     }
-    if (defined($args->{custom_meta}) && $args->{custom_meta} ne q{}) {
-        $action .= '/meta/' .
-                   Qiniu::Utils::Base64::encode_url(
-                       $args->{custom_meta}
-                   );
+    if (defined($meta) && $meta ne q{}) {
+        $meta = Qiniu::Utils::Base64::encode_url($meta);
+        $action .= "/meta/${meta}";
     }
+
     $err = $multipart->field('action', $action);
     if (defined($err)) {
         return undef, $err;
     }
 
-    if (defined($args->{callback_params}) &&
-        $args->{callback_params} ne q{}) {
-        $err = $multipart->field('params', $args->{callback_params});
+    ###
+    if (defined($params) && $params ne q{}) {
+        $err = $multipart->field('params', $params);
         if (defined($err)) {
             return undef, $err;
         }
     }
 
-    my $buf = undef;
-    ($buf, $err) = $multipart->form_file('file', $args->{key});
+    (my $buf, $err) = $multipart->form_file('file', $key);
     if (defined($err)) {
         return undef, $err;
     }
     
     my $source = {
         read => sub {
-            my ($chunk, $err) = $args->{data}->read();
+            my ($chunk, $err) = $data->read();
             if (defined($err)) {
                 return undef, $err;
             }
@@ -88,8 +111,7 @@ sub put {
         },
     };
 
-    my $ret = undef;
-    ($ret, $err) = Qiniu::Utils::HTTPClient::post(
+    (my $ret, $err) = Qiniu::Utils::HTTPClient::post(
         Qiniu::Easy::Conf::UP_HOST . '/upload',
         $multipart->content_type(),
         $source
@@ -99,10 +121,11 @@ sub put {
 
 sub put_file {
     my $args = shift;
+
     my $fh = undef;
     my $err = open($fh, "<", $args->{local_file});
     if (not defined($err)) {
-        return "$OS_ERROR";
+        return undef, "$OS_ERROR";
     }
     binmode($fh);
 
