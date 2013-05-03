@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 ##############################################################################
 #
 # Easy Qiniu Perl SDK
@@ -19,14 +21,14 @@ use Exporter;
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    eqs_crypto_sha1
+    qnc_crypto_sha1
 );
 
-sub eqs_crypto_sha1 {
+sub qnc_crypto_sha1 {
     my $msg = shift;
     my $sha1 = __PACKAGE__->new();
     return $sha1->sum($msg);
-} ## eqs_crypto_sha1
+} ## qnc_crypto_sha1
 
 use constant CHUNK_SIZE   => 64;
 use constant MSG_PADDING  => "\x80" . ("\x0" x 63);

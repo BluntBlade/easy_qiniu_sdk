@@ -13,7 +13,7 @@ sub test_base64_encode_mime {
     my $src  = shift;
     my $dst  = shift;
 
-    my $ret = Qiniu::Utils::Base64::eqs_base64_encode_mime($src);
+    my $ret = Qiniu::Utils::Base64::qnc_base64_encode_mime($src);
     my $check = $ret eq $dst;
     print "$case: [$dst] [$ret] $check\n";
 } # test_base64_encode_mime
@@ -23,7 +23,7 @@ sub test_base64_decode_mime {
     my $src  = shift;
     my $dst  = shift;
 
-    my $ret = Qiniu::Utils::Base64::eqs_base64_decode_mime($src);
+    my $ret = Qiniu::Utils::Base64::qnc_base64_decode_mime($src);
     my $check = $ret eq $dst;
     print "$case: [$dst] [$ret] $check\n";
 } # test_base64_decode_mime

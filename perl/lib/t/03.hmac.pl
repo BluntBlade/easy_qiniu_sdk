@@ -12,7 +12,7 @@ sub test_hmac_sha1 {
     my $src  = shift;
     my $dst  = shift;
 
-    my $ret = eqs_crypto_hmac(Qiniu::Utils::SHA1->new(), $key, $src);
+    my $ret = qnc_crypto_hmac(Qiniu::Utils::SHA1->new(), $key, $src);
     $ret = join("", map { sprintf("%02x", ord($_)) } split("", $ret));
     my $check = $ret eq $dst;
     print "$case: [$dst] [$ret] $check\n";

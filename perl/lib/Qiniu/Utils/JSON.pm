@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 ##############################################################################
 #
 # Easy Qiniu Perl SDK
@@ -20,12 +22,12 @@ use Exporter;
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    eqs_json_marshal
+    qnc_json_marshal
 );
 
-sub eqs_json_marshal {
+sub qnc_json_marshal {
     return &marshal;
-} # eqs_json_marshal
+} # qnc_json_marshal
 
 my $marshal_simply = undef;
 $marshal_simply = sub {

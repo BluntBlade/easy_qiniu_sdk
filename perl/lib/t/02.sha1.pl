@@ -10,7 +10,7 @@ sub test_sha1 {
     my $src  = shift;
     my $dst  = shift;
 
-    my $ret = eqs_crypto_sha1($src);
+    my $ret = qnc_crypto_sha1($src);
     $ret = join("", map { sprintf("%02x", ord($_)) } split("", $ret));
     my $check = $ret eq $dst;
     print "$case: [$dst] [$ret] $check\n";

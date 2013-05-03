@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 ##############################################################################
 #
 # Easy Qiniu Perl SDK
@@ -20,28 +22,28 @@ use Exporter;
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    eqs_base64_encode_mime
-    eqs_base64_decode_mime
+    qnc_base64_encode_mime
+    qnc_base64_decode_mime
 
-    eqs_base64_encode_url
-    eqs_base64_decode_url
+    qnc_base64_encode_url
+    qnc_base64_decode_url
 );
 
-sub eqs_base64_encode_mime {
+sub qnc_base64_encode_mime {
     return &encode_mime;
-} # eqs_base64_encode_mime
+} # qnc_base64_encode_mime
 
-sub eqs_base64_decode_mime {
+sub qnc_base64_decode_mime {
     return &decode_mime;
-} # eqs_base64_decode_mime
+} # qnc_base64_decode_mime
 
-sub eqs_base64_encode_url {
+sub qnc_base64_encode_url {
     return &encode_url;
-} # eqs_base64_encode_url
+} # qnc_base64_encode_url
 
-sub eqs_base64_decode_url {
+sub qnc_base64_decode_url {
     return &url_decode_url;
-} # eqs_base64_decode_url
+} # qnc_base64_decode_url
 
 my $encode_impl = sub {
     my $buf     = shift;
@@ -173,10 +175,10 @@ use constant DECODE_MIME_MAP => {
 };
 
 sub decode_mime {
-    my $buf = shift;
-    $buf =~ s/[=]+$//;
-    $buf =~ s/\r\n//g;
-    return $decode_impl->($buf, DECODE_MIME_MAP);
+    my $str = shift;
+    $str =~ s/[=]+$//;
+    $str =~ s/\r\n//g;
+    return $decode_impl->($str, DECODE_MIME_MAP);
 } # decode_mime
 
 use constant ENCODE_URL_MAP => [
@@ -206,8 +208,8 @@ use constant DECODE_URL_MAP => {
 };
 
 sub decode_url {
-    my $buf = shift;
-    return $decode_impl->($buf, DECODE_URL_MAP);
+    my $str = shift;
+    return $decode_impl->($str, DECODE_URL_MAP);
 } # decode_url
 
 1;

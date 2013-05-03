@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 ##############################################################################
 #
 # Easy Qiniu Perl SDK
@@ -19,16 +21,16 @@ use Exporter;
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    eqs_crypto_hmac
+    qnc_crypto_hmac
 );
 
-sub eqs_crypto_hmac {
+sub qnc_crypto_hmac {
     my $hash       = shift;
     my $secret_key = shift;
     my $msg        = shift;
     my $hmac = __PACKAGE__->new($hash, $secret_key);
     return $hmac->sum($msg);
-} ## eqs_crypto_hmac
+} # qnc_crypto_hmac
 
 my $xor_bytes = sub {
     $lhs = shift;

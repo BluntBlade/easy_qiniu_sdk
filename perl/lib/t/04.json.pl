@@ -10,7 +10,7 @@ sub test_json_marshal {
     my $src  = shift;
     my $dst  = shift;
 
-    my $ret = Qiniu::Utils::JSON::eqs_json_marshal($src);
+    my $ret = Qiniu::Utils::JSON::qnc_json_marshal($src);
     my $check = $ret eq $dst;
     print "$case: [$dst] [$ret] $check\n";
 } # test_json_marshal
