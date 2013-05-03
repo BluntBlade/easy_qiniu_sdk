@@ -21,33 +21,34 @@ use warnings;
 use Qiniu::Utils::HTTPClient;
 
 sub exif_make_url {
-    my $args = shift;
-    return $args->{url} . '?exif';
+    my $url = shift;
+    return $url . '?exif';
 } # exif_make_url
 
 sub exif_call {
-    my $args = shift;
-    my ($ret, $err) = Qiniu::Utils::HTTPClient::get(exif_make_url($args));
+    my $url = shift;
+    my ($ret, $err) = Qiniu::Utils::HTTPClient::get(exif_make_url($url));
     return $ret, $err;
 } # exif_call
 
 sub imageinfo_make_url {
-    my $args = shift;
-    return $args->{url} . '?imageInfo';
+    my $url = shift;
+    return $url . '?imageInfo';
 } # imageinfo_make_url
 
 sub imageinfo_call {
-    my $args = shift;
+    my $url = shift;
     my ($ret, $err) = Qiniu::Utils::HTTPClient::get(
-        imageinfo_make_url($args)
+        imageinfo_make_url($url)
     );
     return $ret, $err;
 } # imageinfo_call
 
 sub view_make_url {
+    my $url  = shift;
     my $args = shift;
-    my $url = $args->{url} . '?imageView';
 
+    $url .= '?imageView';
     if (defined($args->{width}) and $args->{width} > 0) {
         $url .= '/w/' . $args->{width};
     }
@@ -63,8 +64,11 @@ sub view_make_url {
 } # view_make_url
 
 sub view_call {
+    my $url  = shift;
     my $args = shift;
-    my ($ret, $err) = Qiniu::Utils::HTTPClient::get(view_make_url($args));
+    my ($ret, $err) = Qiniu::Utils::HTTPClient::get(
+        view_make_url($url, $args)
+    );
     return $ret, $err;
 } # view_call 
 

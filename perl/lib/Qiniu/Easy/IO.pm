@@ -27,17 +27,16 @@ use Qiniu::Utils::MIME::Multipart;
 use Qiniu::Easy::Conf;
 
 sub put {
-    my $args = shift;
+    my $uptoken = shift;
+    my $key     = shift;
+    my $data    = shift;
+    my $extra   = shift;
 
     ######
-    my $uptoken = "$args->{uptoken}";
-    my $bucket  = "$args->{bucket}";
-    my $key     = "$args->{key}";
-    my $data    = $args->{data};
-
-    my $mt     = $args->{mime_type}       || $args->{mimeType};
-    my $meta   = $args->{custom_meta}     || $args->{customMeta};
-    my $params = $args->{callback_params} || $args->{callbackParams};
+    my $bucket = $extra->{bucket};
+    my $mt     = $extra->{mime_type}       || $extra->{mimeType};
+    my $meta   = $extra->{custom_meta}     || $extra->{customMeta};
+    my $params = $extra->{callback_params} || $extra->{callbackParams};
 
     ######
     my $err       = undef;
@@ -92,6 +91,10 @@ sub put {
                 return undef, $err;
             }
 
+            if ($chunk eq q{}) {
+                $multipart->end();
+            }
+
             return $multipart->read();
         },
     };
@@ -105,15 +108,18 @@ sub put {
 } # put
 
 sub put_file {
-    my $args = shift;
+    my $uptoken    = shift;
+    my $key        = shift;
+    my $local_file = shift;
+    my $extra      = shift;
 
-    my $err = open(my $fh, "<", $args->{local_file});
+    my $err = open(my $fh, "<", $local_file);
     if (not defined($err)) {
         return undef, "$OS_ERROR";
     }
     binmode($fh);
 
-    $args->{data} = {
+    my $data = {
         read => sub {
             my $chunk = q{};
             my $bytes = sysread($fh, $chunk, 4096);
@@ -129,7 +135,7 @@ sub put_file {
         },
     };
 
-    return put($args);
+    return put($uptoken, $key, $data, $extra);
 } # put_file
 
 1;

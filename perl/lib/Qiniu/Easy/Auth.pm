@@ -20,8 +20,8 @@ use warnings;
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
-    eqs_rs_sign
-    eqs_rs_sign_json
+    qnc_rs_sign
+    qnc_rs_sign_json
 );
 
 use Qiniu::Utils::JSON;
@@ -29,13 +29,13 @@ use Qiniu::Utils::Base64;
 use Qiniu::Utils::HMAC;
 use Qiniu::Utils::SHA1;
 
-sub eqs_rs_sign {
+sub qnc_rs_sign {
     return &sign;
-} # eqs_rs_sign
+} # qnc_rs_sign
 
-sub eqs_rs_sign_json {
+sub qnc_rs_sign_json {
     return &sign_json;
-} # eqs_rs_sign_json
+} # qnc_rs_sign_json
 
 # Qiniu authorization sign (count in Bytes)
 #
