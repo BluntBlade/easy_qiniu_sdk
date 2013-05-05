@@ -157,6 +157,7 @@ sub round_trip {
     );
 
     if (not defined($socket->connected())) {
+        $socket->close();
         return undef, qq{Failed to connect to server. [$domain]};
     }
 
@@ -177,6 +178,7 @@ sub round_trip {
         while (my ($data, $read) = $body->{read}->(4096)) {
             my $sent = $socket->send($data);
             if (not defined($sent)) {
+                $socket->close();
                 return undef, qq(${OS_ERROR} [$domain]);
             }
         } # while
@@ -214,6 +216,7 @@ sub round_trip {
         last;
     } # while
     $state->($state_data, undef, $resp);
+    $socket->close();
 
     return $resp, $err;
 } # round_trip

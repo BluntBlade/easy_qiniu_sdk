@@ -69,6 +69,34 @@ sub sign_json {
     return sign($access_key, $secret_key, $buf);
 } # sign_json
 
+sub sign_request {
+    my $req        = shift;
+    my $secret_key = shift;
+    my $inc_body   = shift;
+
+    my $hmac = Qiniu::Utils::HMAC->new(
+        Qiniu::Utils::SHA1->new(),
+        $secret_key
+    );
+
+    my $url = $req->{url};
+    $url =~ s,^([A-Za-z]+://)?([^/]+),,;
+
+    $hmac->write($url . "\n");
+    if ($inc_body) {
+        $hmac->write($req->{body});
+    }
+
+    my $digest = Qiniu::Utils::Base64::encode_url($hmac->sum());
+    return $digest;
+} # sign_request
+
+sub new_transport {
+} # new_transport
+
+sub new_client {
+} # new_client
+
 1;
 
 __END__
