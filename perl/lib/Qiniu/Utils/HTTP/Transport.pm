@@ -64,7 +64,7 @@ $parse_response_headers = sub {
 
     my $remainder = $state_data->{remainder} .= $data;
     while (1) {
-        if ($remainder =~ m/^([-\w]+):\s*([^\r\n]+)\r?\n/mgoc) {
+        if ($remainder =~ m/\G([-\w]+):[ \t]*([^\r\n]+)\r?\n/gmoc) {
             my $h = $upcase->($1);
             my $v = $2;
             $resp->{headers}{$h} ||= [];
@@ -76,7 +76,7 @@ $parse_response_headers = sub {
             }
             next;
         }
-        if ($remainder =~ m/^\s+([^\r\n]+)\r?\n/mgoc) {
+        if ($remainder =~ m/\G([ \t]+)([^\r\n]+)\r?\n/gmoc) {
             my $h = $state_data->{prev_header};
             my $v = $1;
             if (defined($h)) {
@@ -85,7 +85,7 @@ $parse_response_headers = sub {
                 return undef, qq{Invalid response};
             }
         }
-        if ($remainder =~ m/^\r?\n/mgoc) {
+        if ($remainder =~ m/\G\r?\n/gmoc) {
             $state_data->{remainder} = q{};
             $data = substr($remainder, pos($remainder));
             return $parse_response_body->($state_data, $data, $resp);
@@ -93,8 +93,9 @@ $parse_response_headers = sub {
         last;
     } # while
 
-    if (pos($remainder) > 0) {
-        $state_data->{remainder} = substr($remainder, pos($remainder));
+    my $pos = pos($remainder);
+    if (defined($pos) and $pos > 0) {
+        $state_data->{remainder} = substr($remainder, $pos);
     }
     return $parse_response_headers, undef;
 }; # parse_response_headers
@@ -183,13 +184,6 @@ sub round_trip {
             }
         } # while
     }
-    if (defined($headers->{Connection})) {
-        foreach my $v (@{$headers->{Connection}}) {
-            if (uc($v) eq 'CLOSE') {
-                $socket->shutdown(1);
-            }
-        } # foreach
-    }
 
     my $err        = undef;
     my $state      = $parse_response_line;
@@ -204,9 +198,12 @@ sub round_trip {
 
     my $buf = q{};
     while (1) {
-        my $err = $socket->recv($buf, 4096);
-        if (not defined($err)) {
+        my $peer_addr = $socket->recv($buf, 65536);
+        if (not defined($peer_addr)) {
             $err = qq(${OS_ERROR});
+            last;
+        }
+        if ($buf eq q{}) {
             last;
         }
         ($state, $err) = $state->($state_data, $buf, $resp);

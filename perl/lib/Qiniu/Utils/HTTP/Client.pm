@@ -50,26 +50,33 @@ my $call = sub {
             'Host'         => [$host],
             'User-Agent'   => [q{Easy-Qiniu-Perl-SDK/0.1}],
             'Connection'   => [q{Close}],
-            'Content-Type' => [$ct],
         },
     };
 
-    if (ref($body) eq 'HASH') {
-        $req->{body} = $body;
-    }
-    if (ref($body) eq q{}) {
-        $body = "${body}";
-        if ($body ne q{}) {
-            $req->{headers}{'Content-Length'} = [length($body)];
-            $req->{body} = {
-                read => sub {
-                    return $body, undef;
-                },
-            };
-        }
+    if (defined($ct)) {
+        $req->{headers}{'Content-Type'} = [$ct];
     }
 
-    my ($resp, $err) = $self->{tr}->round_trip();
+    if (defined($body)) {
+        if (ref($body) eq 'HASH') {
+            $req->{body} = $body;
+        }
+        if (ref($body) eq q{}) {
+            $body = "${body}";
+            if ($body ne q{}) {
+                $req->{headers}{'Content-Length'} = [length($body)];
+                $req->{body} = {
+                    read => sub {
+                        return $body, undef;
+                    },
+                };
+            }
+        }
+    } elsif ($method eq q{GET}) {
+        $req->{headers}{'Content-Length'} = [q{0}];
+    }
+
+    my ($resp, $err) = $self->{tr}->round_trip($req);
     return $resp, $err;
 }; # call
 
@@ -85,7 +92,7 @@ sub new {
 sub get {
     my $self = shift;
     my $url  = shift;
-    return $self->$call($url);
+    return $self->$call(q{GET}, $url);
 } # get
 
 sub post {
@@ -93,7 +100,7 @@ sub post {
     my $url  = shift;
     my $body = shift;
     my $ct   = shift || q{application/octet-stream};
-    return $self->$call($url, $body, $ct);
+    return $self->$call(q{POST}, $url, $body, $ct);
 } # post
 
 sub default_get {
