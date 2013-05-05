@@ -144,21 +144,21 @@ sub round_trip {
         return $self->{round_trip}->();
     }
 
-    my $domain  = $req->{url}{domain} || "";
+    my $host    = $req->{url}{host} || "";
     my $port    = $req->{url}{port}   || "";
     my $path    = $req->{url}{path}   || "";
     my $headers = $req->{headers}     || {};
     my $body    = $req->{body};
 
     my $socket = IO::Socket::INET->new(
-        PeerHost => $domain,
+        PeerHost => $host,
         PeerPort => $port,
         Proto    => q{tcp},
     );
 
     if (not defined($socket->connected())) {
         $socket->close();
-        return undef, qq{Failed to connect to server. [$domain]};
+        return undef, qq{Failed to connect to server. [$host]};
     }
 
     my $method = uc($req->{method});
@@ -179,9 +179,16 @@ sub round_trip {
             my $sent = $socket->send($data);
             if (not defined($sent)) {
                 $socket->close();
-                return undef, qq(${OS_ERROR} [$domain]);
+                return undef, qq(${OS_ERROR} [$host]);
             }
         } # while
+    }
+    if (defined($headers->{Connection})) {
+        foreach my $v (@{$headers->{Connection}}) {
+            if (uc($v) eq 'CLOSE') {
+                $socket->shutdown(1);
+            }
+        } # foreach
     }
 
     my $err        = undef;

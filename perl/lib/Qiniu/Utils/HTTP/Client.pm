@@ -27,28 +27,30 @@ my $call = sub {
     my $body   = shift;
     my $ct     = shift;
 
-    if ($url !~ m,^(?:https?://)?([^/]+)(.+)$,) {
+    if ($url !~ m,^(?:https?://)?([^/]+)(.*)$,o) {
         return undef, qq{Invalid URL. [$url]};
     }
 
-    my $host = $1;
+    my $peer = $1;
     my $uri  = $2;
 
-    my ($domain, $port) = split(/:/, $host, 2);
+    my ($host, $port) = split(/:/, $peer, 2);
     my ($path, $query_str) = split(/[?]/, $uri, 2);
 
     my $req = {
         method  => uc($method),
         url     => {
             raw       => $url,
-            domain    => $domain,
-            path      => $path,
+            host      => $host,
+            port      => $port || q{80},
+            path      => $path || q{/},
             query_str => $query_str,
         },
         headers => {
-            'Host'         => [$domain],
-            'Content-Type' => [$ct],
+            'Host'         => [$host],
             'User-Agent'   => [q{Easy-Qiniu-Perl-SDK/0.1}],
+            'Connection'   => [q{Close}],
+            'Content-Type' => [$ct],
         },
     };
 
@@ -56,11 +58,15 @@ my $call = sub {
         $req->{body} = $body;
     }
     if (ref($body) eq q{}) {
-        $req->{body} = {
-            read => sub {
-                return $body, undef;
-            },
-        };
+        $body = "${body}";
+        if ($body ne q{}) {
+            $req->{headers}{'Content-Length'} = [length($body)];
+            $req->{body} = {
+                read => sub {
+                    return $body, undef;
+                },
+            };
+        }
     }
 
     my ($resp, $err) = $self->{tr}->round_trip();

@@ -8,7 +8,7 @@ use Qiniu::Utils::HTTP::Transport;
 my $req = {
     method => q{GET},
     url => {
-        domain    => q{www.baidu.com},
+        host      => q{www.baidu.com},
         port      => q{80},
         path      => q{/},
         query_str => q{},
