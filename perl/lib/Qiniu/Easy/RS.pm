@@ -19,8 +19,8 @@ use strict;
 use warnings;
 
 use Qiniu::Utils::Base64;
-use Qiniu::Utils::HTTPClient;
 
+use Qiniu::Easy::Auth;
 use Qiniu::Easy::Conf;
 
 sub new {
@@ -31,7 +31,7 @@ sub new {
         access_key => $access_key,
         secret_key => $secret_key,
     };
-    $self->{client} = Qiniu::Utils::HTTPClient->new(
+    $self->{client} = Qiniu::Easy::Auth::new_client(
         $access_key,
         $secret_key,
     );
@@ -44,7 +44,7 @@ sub stat {
     my $key    = shift;
 
     my $url = Qiniu::Easy::Conf::RS_HOST . uri_stat($bucket, $key);
-    my $ret = $self->{client}->call($url);
+    my ($ret, $err) = $self->{client}->get($url);
     my $stat_ret = {
         hash      => (defined($ret->{hash}))     ? $ret->{hash}     : "",
         fsize     => (defined($ret->{fsize}))    ? $ret->{fsize}    : 0,
@@ -61,7 +61,7 @@ sub delete {
     my $key    = shift;
 
     my $url = Qiniu::Easy::Conf::RS_HOST . uri_delete($bucket, $key);
-    my ($ret, $err) = $self->{client}->call($url);
+    my ($ret, $err) = $self->{client}->get($url);
     return $ret, $err;
 } # delete
 
@@ -74,7 +74,7 @@ sub move {
 
     my $url = Qiniu::Easy::Conf::RS_HOST
             . uri_move($src_bucket, $src_key, $dst_bucket, $dst_key);
-    my ($ret, $err) = $self->{client}->call($url);
+    my ($ret, $err) = $self->{client}->get($url);
     return $ret, $err;
 } # move
 
@@ -87,7 +87,7 @@ sub copy {
 
     my $url = Qiniu::Easy::Conf::RS_HOST
             . uri_copy($src_bucket, $src_key, $dst_bucket, $dst_key);
-    my ($ret, $err) = $self->{client}->call($url);
+    my ($ret, $err) = $self->{client}->get($url);
     return $ret, $err;
 } # copy
 
@@ -103,7 +103,7 @@ sub uri_stat {
 sub uri_delete {
     my $bucket = shift;
     my $key    = shift;
-    my $id =  Qiniu::Utils::Base64::encode_url(
+    my $id = Qiniu::Utils::Base64::encode_url(
         "${bucket}:${key}"
     );
     return "/delete/${id}";

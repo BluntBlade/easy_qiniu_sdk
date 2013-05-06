@@ -142,7 +142,7 @@ sub round_trip {
 
     my $package = (caller(1))[0] || q{};
     if ($package ne __PACKAGE__ and $self->{round_trip}) {
-        return $self->{round_trip}->();
+        return $self->{round_trip}->($self, $req);
     }
 
     my $host    = $req->{url}{host} || "";

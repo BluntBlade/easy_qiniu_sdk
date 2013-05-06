@@ -13,7 +13,7 @@
 #
 ##############################################################################
 
-package Qiniu::Easy::RS;
+package Qiniu::Easy::Auth;
 
 use strict;
 use warnings;
@@ -28,6 +28,9 @@ use Qiniu::Utils::JSON;
 use Qiniu::Utils::Base64;
 use Qiniu::Utils::HMAC;
 use Qiniu::Utils::SHA1;
+
+use Qiniu::Utils::HTTP::Transport;
+use Qiniu::Utils::HTTP::Client;
 
 sub qnc_rs_sign {
     return &sign;
@@ -79,7 +82,7 @@ sub sign_request {
         $secret_key
     );
 
-    my $url = $req->{url};
+    my $url = $req->{url}{raw};
     $url =~ s,^([A-Za-z]+://)?([^/]+),,;
 
     $hmac->write($url . "\n");
@@ -91,10 +94,50 @@ sub sign_request {
     return $digest;
 } # sign_request
 
+sub is_inc_body {
+    my $req = shift;
+    my $headers = $req->{headers};
+    if (not defined($headers)) {
+        return undef;
+    }
+    foreach my $h (keys(%{$headers})) {
+        if (uc($h) ne q{CONTENT-TYPE}) {
+            next;
+        }
+        foreach my $v (values(@{$headers->{$h}})) {
+            if ($v =~ m,application/x-www-form-urlencoded,i) {
+                return 1;
+            }
+        } # foreach
+    } # foreach
+    return undef;
+} # is_inc_body
+
 sub new_transport {
+    my $access_key = shift;
+    my $secret_key = shift;
+    my $tr = {
+        round_trip => sub {
+            my $self = shift;
+            my $req  = shift;
+            my $digest = sign_request(
+                $req,
+                $secret_key,
+                is_inc_body($req),
+            );
+            my $token = "${access_key}:${digest}";
+            $req->{headers} ||= {};
+            $req->{headers}{Authorization} = ["QBox ${token}"];
+            return $self->round_trip($req);
+        },
+    };
+    return Qiniu::Utils::HTTP::Transport->new($tr);
 } # new_transport
 
 sub new_client {
+    my $tr = &new_transport;
+    my $client = Qiniu::Utils::HTTP::Client->new($tr);
+    return $client;
 } # new_client
 
 1;

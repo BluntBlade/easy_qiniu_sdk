@@ -190,7 +190,8 @@ use constant ENCODE_URL_MAP => [
 
 sub encode_url {
     my $buf = shift;
-    return $encode_impl->($buf, ENCODE_URL_MAP);
+    my ($ret, $padding_len) = $encode_impl->($buf, ENCODE_URL_MAP);
+    return $ret;
 } # encode_url
 
 use constant DECODE_URL_MAP => {
