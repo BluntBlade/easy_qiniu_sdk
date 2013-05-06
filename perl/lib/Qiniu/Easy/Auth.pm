@@ -82,10 +82,8 @@ sub sign_request {
         $secret_key
     );
 
-    my $url = $req->{url}{raw};
-    $url =~ s,^([A-Za-z]+://)?([^/]+),,;
-
-    $hmac->write($url . "\n");
+    my $path = $req->{url}{path};
+    $hmac->write($path . "\n");
     if ($inc_body) {
         $hmac->write($req->{body});
     }
