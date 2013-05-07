@@ -20,7 +20,7 @@ module Qiniu
     module Utils
         module Base64
 
-            def _encode_impl (buf, map)
+            def self._encode_impl (buf, map)
                 buf_len = buf.length
                 if buf_len == 0 then
                     return "", 0
@@ -64,14 +64,14 @@ module Qiniu
                     ret << c1 << c2 << c3 << c4
                 end # while
                 return ret, padding_len
-            end # _encode_impl
+            end # self._encode_impl
 
             FIRST  = 1
             SECOND = 2
             THIRD  = 3
             FOURTH = 4
 
-            def _decode_impl (str, map)
+            def self._decode_impl (str, map)
                 buf_len = str.length
                 if buf_len == 0 then
                     return ""
@@ -103,7 +103,7 @@ module Qiniu
                     end
                 end
                 return ret
-            end # _decode_impl
+            end # self._decode_impl
 
             ENCODE_MIME_MAP = %w[
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -112,23 +112,23 @@ module Qiniu
                 + /
             ]
 
-            def encode_mime (buf, len = 76, lb = "\r\n")
-                ret, padding_len = _encode_impl(buf, ENCODE_MIME_MAP)
+            def self.encode_mime (buf, len = 76, lb = "\r\n")
+                ret, padding_len = self._encode_impl(buf, ENCODE_MIME_MAP)
                 ret << ("=" * padding_len )
                 ret.gsub(/.{#{len}}/) {|s| s + lb}
-            end # encode_mime
+            end # self.encode_mime
 
             DECODE_MIME_MAP = Hash.new
             ENCODE_MIME_MAP.each_with_index do |c,i|
                 DECODE_MIME_MAP[c] = i
             end
 
-            def decode_mime (str, lb = "\r\n")
-                _decode_impl(
+            def self.decode_mime (str, lb = "\r\n")
+                self._decode_impl(
                     str.gsub(lb, "").sub(/=+$/, ""),
                     DECODE_MIME_MAP
                 )
-            end # decode_mime
+            end # self.decode_mime
 
             ENCODE_URL_MAP = %w[
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -137,18 +137,22 @@ module Qiniu
                 - _
             ]
 
-            def encode_url (str)
-                _encode_impl(str, ENCODE_URL_MAP)
-            end # encode_url
+            def self.encode_url (str)
+                ret, padding_len = self._encode_impl(str, ENCODE_URL_MAP)
+                ret << ("=" * padding_len )
+            end # self.encode_url
 
             DECODE_URL_MAP = Hash.new
             ENCODE_URL_MAP.each_with_index do |c,i|
                 DECODE_URL_MAP[c] = i
             end
 
-            def decode_url (str)
-                _decode_impl(str, DECODE_URL_MAP)
-            end # decode_url
+            def self.decode_url (str)
+                self._decode_impl(
+                    str.sub(/=+$/, ""),
+                    DECODE_URL_MAP)
+                )
+            end # self.decode_url
 
         end # module Base64
     end # module Utils

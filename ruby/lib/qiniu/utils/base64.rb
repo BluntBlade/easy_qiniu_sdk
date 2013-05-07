@@ -16,7 +16,7 @@
 #
 ##############################################################################
 
-require 'qiniu/utils/base64_native'
+require 'qiniu/utils/base64_wrap'
 
 # Uncomment the following line if there was a problem with the native base64
 # algorithms.

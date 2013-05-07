@@ -5,7 +5,7 @@
 #
 # Easy Qiniu Ruby SDK
 #
-# Module: qiniu/utils/base64_native.rb
+# Module: qiniu/utils/base64_wrap.rb
 #
 # Author: LIANG Tao
 # Weibo:  @无锋之刃
@@ -22,29 +22,27 @@ module Qiniu
     module Utils
         module Base64
 
-            def encode_mime (buf)
+            def self.encode_mime (buf)
                 Base64.encode64(buf)
-            end # encode_mime
+            end # self.encode_mime
 
-            def decode_mime (str)
+            def self.decode_mime (str)
                 Base64.decode64(str)
-            end # decode_mime
+            end # self.decode_mime
 
-            def encode_url (buf)
+            def self.encode_url (buf)
                 Base64.encode64(buf)        \
                       .gsub(/\r?\n/, "")    \
-                      .sub(/=+$/, "")       \
                       .gsub("+", "-")       \
                       .gsub("/", "_")
-            end # encode_url
+            end # self.encode_url
 
-            def decode_url (str)
+            def self.decode_url (str)
                 Base64.decode64(
                     str.gsub("_", "/")      \
-                       .gsub("-", "+")      \
-                       .sub(/$/, "==")
+                       .gsub("-", "+")
                 )
-            end # decode_url
+            end # self.decode_url
 
         end # module Base64
     end # module Utils
