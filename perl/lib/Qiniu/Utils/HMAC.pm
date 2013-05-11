@@ -32,16 +32,6 @@ sub qnc_crypto_hmac {
     return $hmac->sum($msg);
 } # qnc_crypto_hmac
 
-my $xor_bytes = sub {
-    $lhs = shift;
-    $rhs = shift;
-    my @lhs = split("", $lhs);
-    my @rhs = split("", $rhs);
-    return join "", map {
-        chr(ord($rhs[$_]) ^ ord($lhs[$_]));
-    } 0..scalar(@rhs) - 1;
-}; # xor_bytes
-
 sub new {
     my $class      = shift || __PACKAGE__;
     my $hash       = shift;
@@ -56,7 +46,7 @@ sub new {
 
     # Don't extract the length of the secret key since it would be changed
     if (length($secret_key) > $block_size) {
-        $secret_key = $hash->reset()->sum($key);
+        $secret_key = $hash->reset()->sum($secret_key);
         $hash->reset();
     }
     if (length($secret_key) < $block_size) {
@@ -64,8 +54,8 @@ sub new {
     }
     $self->{calc_secret_key} = $secret_key;
 
-    $self->{o_key_pad} = $xor_bytes->("\x5C" x $block_size, $secret_key);
-    $self->{i_key_pad} = $xor_bytes->("\x36" x $block_size, $secret_key);
+    $self->{o_key_pad} = ("\x5C" x $block_size) ^ $secret_key;
+    $self->{i_key_pad} = ("\x36" x $block_size) ^ $secret_key;
 
     $self->reset();
     return $self;
