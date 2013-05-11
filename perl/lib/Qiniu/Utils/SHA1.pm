@@ -86,13 +86,7 @@ my $calc = sub {
             $k = 0xCA62C1D6;
         }
 
-        my $temp = $mod_add->(
-            $left_rotate->($a, 5),
-            $f,
-            $e,
-            $k,
-            $w[$i],
-        );
+        my $temp = $mod_add->($left_rotate->($a, 5), $f, $e, $k, $w[$i]);
         $e = $d;
         $d = $c;
         $c = $left_rotate->($b, 30);
@@ -123,18 +117,18 @@ sub write {
         return;
     }
 
-    $self->{origin_len} += length($msg);
+    $self->{msg_len} += length($msg);
     $msg = $self->{remainder} . $msg;
-    $self->{remainder} = "";
 
-    my $data_len = length($msg);
-    if ($data_len < CHUNK_SIZE) {
+    my $msg_len = length($msg);
+    if ($msg_len < CHUNK_SIZE) {
         $self->{remainder} = $msg;
         return $self;
     }
 
-    for (my $pos = 0; $pos < $data_len; $pos += CHUNK_SIZE) {
-        if ($data_len - $pos < CHUNK_SIZE) {
+    $self->{remainder} = "";
+    for (my $pos = 0; $pos < $msg_len; $pos += CHUNK_SIZE) {
+        if ($msg_len - $pos < CHUNK_SIZE) {
             $self->{remainder} = substr($msg, $pos);
             last;
         }
@@ -149,25 +143,25 @@ sub sum {
     my $msg  = shift;
 
     $self->write($msg);
-    my $last_data = $self->{remainder} . MSG_PADDING;
+    my $last_msg = $self->{remainder} . MSG_PADDING;
 
     if (CHUNK_SIZE < (length($self->{remainder}) + 1 + 8)) {
-        $self->$calc(substr($last_data, 0, CHUNK_SIZE));
-        $last_data = ZERO_PADDING;
+        $self->$calc(substr($last_msg, 0, CHUNK_SIZE));
+        $last_msg = ZERO_PADDING;
     }
     else {
-        $last_data = substr($last_data, 0, 56);
+        $last_msg = substr($last_msg, 0, 56);
     }
-    my $origin_bits_len = $self->{origin_len} * 8;
-    $last_data .= pack("N", ($origin_bits_len >> 32) & 0xFFFFFFFF);
-    $last_data .= pack("N", $origin_bits_len & 0xFFFFFFFF);
-    $self->$calc($last_data);
+    my $msg_bits_len = $self->{msg_len} * 8;
+    $last_msg .= pack("N", ($msg_bits_len >> 32) & 0xFFFFFFFF);
+    $last_msg .= pack("N", $msg_bits_len & 0xFFFFFFFF);
+    $self->$calc($last_msg);
     return join("", map { pack("N", $_) } @{$self->{hash}});
 } # sum
 
 sub reset {
     my $self = shift;
-    $self->{origin_len} = 0;
+    $self->{msg_len} = 0;
     $self->{remainder}  = "";
 
     $self->{hash} = [
