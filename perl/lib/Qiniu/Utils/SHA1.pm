@@ -53,7 +53,7 @@ my $calc = sub {
     my $self = shift;
     my $msg  = shift;
 
-    my @w = unpack("N" x 16, $msg);
+    my @w = unpack('N16', $msg);
     for (my $i = 16; $i < 80; $i += 1) {
         $w[$i] = $left_rotate->(
             ($w[$i-3] ^ $w[$i-8] ^ $w[$i-14] ^ $w[$i-16]),
@@ -153,10 +153,10 @@ sub sum {
         $last_msg = substr($last_msg, 0, 56);
     }
     my $msg_bits_len = $self->{msg_len} * 8;
-    $last_msg .= pack("N", ($msg_bits_len >> 32) & 0xFFFFFFFF);
-    $last_msg .= pack("N", $msg_bits_len & 0xFFFFFFFF);
+    $last_msg .= pack('N', ($msg_bits_len >> 32) & 0xFFFFFFFF);
+    $last_msg .= pack('N', $msg_bits_len & 0xFFFFFFFF);
     $self->$calc($last_msg);
-    return join("", map { pack("N", $_) } @{$self->{hash}});
+    return join("", map { pack('N', $_) } @{$self->{hash}});
 } # sum
 
 sub reset {
