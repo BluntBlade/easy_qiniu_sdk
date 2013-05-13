@@ -1,5 +1,18 @@
 #!/usr/bin/env lua
 
+--[[
+Easy Qiniu Lua SDK
+
+Module: qiniu_base64.lua
+
+Author: LIANG Tao
+Weibo:  @无锋之刃
+Email:  amethyst.black@gmail.com
+        liangtao@qiniu.com
+
+Wiki:   https://en.wikipedia.org/wiki/Base64
+--]]
+
 require('bit32')
 require('string')
 
