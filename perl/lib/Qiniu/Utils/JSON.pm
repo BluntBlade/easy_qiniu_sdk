@@ -80,8 +80,8 @@ $marshal_simply = sub {
 
     # The object is a string.
     my $str = $obj;
-    $str =~ s/"/\\"/go;
     $str =~ s/\\/\\\\/go;
+    $str =~ s/"/\\"/go;
     $str =~ s,/,\\/,go;
     $str =~ s/[\b]/\\b/go;
     $str =~ s/\f/\\f/go;
