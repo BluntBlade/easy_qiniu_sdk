@@ -16,7 +16,7 @@ Wiki:   https://en.wikipedia.org/wiki/Base64
 require('bit32')
 require('string')
 
-qnc_base64 = (function ()
+qiniu_base64 = (function ()
     local t = {}
 
     local function __encode_iterator(buf)
@@ -254,8 +254,8 @@ qnc_base64 = (function ()
 end)()
 
 --[[
-print(qnc_base64.encode_mime('abcdef'))
-print(qnc_base64.decode_mime('YWJjZGVm'))
-print(qnc_base64.encode_url('abcdef'))
-print(qnc_base64.decode_url('YWJjZGVm'))
+print(qiniu_base64.encode_mime('abcdef'))
+print(qiniu_base64.decode_mime('YWJjZGVm'))
+print(qiniu_base64.encode_url('abcdef'))
+print(qiniu_base64.decode_url('YWJjZGVm'))
 --]]
