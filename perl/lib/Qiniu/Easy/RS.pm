@@ -103,33 +103,33 @@ sub batch {
 sub batch_stat {
     my $self    = shift;
     my $entries = shift;
-    my $pathes = map { uri_stat($_->{bucket}, $_->{key}) } @{$entries};
-    return $self->batch($pathes);
+    my $op = map { uri_stat($_->{bucket}, $_->{key}) } @{$entries};
+    return $self->batch($op);
 } # batch_stat
 
 sub batch_delete {
     my $self    = shift;
     my $entries = shift;
-    my $pathes = map { uri_delete($_->{bucket}, $_->{key}) } @{$entries};
-    return $self->batch($pathes);
+    my $op = map { uri_delete($_->{bucket}, $_->{key}) } @{$entries};
+    return $self->batch($op);
 } # batch_delete
 
 sub batch_copy {
     my $self    = shift;
     my $entries = shift;
-    my $pathes = map {
+    my $op = map {
         uri_copy($_->{src_bucket},$_->{src_key},$_->{dst_bucket},$_->{dst_key})
     } @{$entries};
-    return $self->batch($pathes);
+    return $self->batch($op);
 } # batch_copy
 
 sub batch_move {
     my $self    = shift;
     my $entries = shift;
-    my $pathes = map {
+    my $op = map {
         uri_move($_->{src_bucket},$_->{src_key},$_->{dst_bucket},$_->{dst_key})
     } @{$entries};
-    return $self->batch($pathes);
+    return $self->batch($op);
 } # batch_move
 
 ### module functions
@@ -184,12 +184,15 @@ sub uri_move {
 sub token_for_get {
     my $args = shift;
     my $policy = {};
+
     if (defined($args->{scope})) {
         $policy->{S} = $args->{scope};
     }
+
     if (defined($args->{expires})) {
         $policy->{E} = $args->{expires} + time();
     }
+
     my $access_key = $args->{access_key} || Qiniu::Easy::Conf::ACCESS_KEY;
     my $secret_key = $args->{secret_key} || Qiniu::Easy::Conf::SECRET_KEY;
     my $token = Qiniu::Easy::Auth::sign_json($access_key, $secret_key, $policy);
@@ -199,47 +202,47 @@ sub token_for_get {
 sub token_for_put {
     my $args = shift;
     my $policy = {};
+
     if (defined($args->{scope})) {
         $policy->{scope} = $args->{scope};
     }
+
     if (defined($args->{expires})) {
         $policy->{expires} = $args->{expires} + time();
     }
 
     if (defined($args->{callback_url})) {
         $policy->{callback_url} = $args->{callback_url};
-    }
-    if (defined($args->{callbackUrl})) {
+    } elsif (defined($args->{callbackUrl})) {
         $policy->{callback_url} = $args->{callbackUrl};
     }
 
     if (defined($args->{callback_body_type})) {
         $policy->{callback_body_type} = $args->{callback_body_type};
-    }
-    if (defined($args->{callbackUrl})) {
+    } elsif (defined($args->{callbackBodyType})) {
         $policy->{callback_body_type} = $args->{callbackBodyType};
     }
 
     if (defined($args->{async_ops})) {
         $policy->{async_ops} = $args->{async_ops};
-    }
-    if (defined($args->{asyncOps})) {
+    } elsif (defined($args->{asyncOps})) {
         $policy->{async_ops} = $args->{asyncOps};
     }
 
     if (defined($args->{customer})) {
         $policy->{customer} = $args->{customer};
     }
+
     if (defined($args->{escape})) {
         $policy->{escape} = $args->{escape};
     }
 
     if (defined($args->{detect_mime})) {
         $policy->{detect_mime} = $args->{detect_mime};
-    }
-    if (defined($args->{detectMime})) {
+    } elsif (defined($args->{detectMime})) {
         $policy->{detect_mime} = $args->{detectMime};
     }
+
     my $access_key = $args->{access_key} || Qiniu::Easy::Conf::ACCESS_KEY;
     my $secret_key = $args->{secret_key} || Qiniu::Easy::Conf::SECRET_KEY;
     my $token = Qiniu::Easy::Auth::sign_json($access_key, $secret_key, $policy);
