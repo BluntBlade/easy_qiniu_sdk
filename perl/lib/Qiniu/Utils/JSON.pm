@@ -171,7 +171,7 @@ my $lex = sub {
             return OPEN_BRACKET, '[';
         }
         if ($str =~ m/\G\]/goc) {
-            return CLOSE_BRACKET, ']'; 
+            return CLOSE_BRACKET, ']';
         }
         if ($str =~ m/\G\s+/goc) {
             return SPACES, undef;
@@ -180,10 +180,159 @@ my $lex = sub {
     };
 }; # $lex
 
-my $unmarshal = sub {
-}; # $unmarshal
+use constant START           => 1;
+use constant OBJECT          => 2;
+use constant OBJECT_KEY      => 3;
+use constant OBJECT_COLON    => 4;
+use constant OBJECT_CONTINUE => 5;
+use constant ARRAY           => 6;
+use constant ARRAY_CONTINUE  => 7;
+use constant LEVEL_DOWN      => 8;
+
+my $yacc = sub {
+    my $str = shift;
+
+    my $lexer  = $lex->($str);
+    my @state  = (START);
+    my @index  = (undef);
+    my @object = (undef);
+    my $level  = 0;
+
+    while (1) {
+        my ($token, $val) = $lexer->();
+        if ($token == ERROR) {
+            return undef, 'Invalid JSON text.';
+        }
+        if ($token == SPACES) {
+            next;
+        }
+
+        if ($state[$level] == START) {
+
+            if ($token == OPEN_BRACE) {
+                $level = $level + 1;
+                push @index,  undef;
+                push @object, {};
+                push @state,  OBJECT;
+            } elsif ($token == OPEN_BRACKET) {
+                $level = $level + 1;
+                push @index,  0;
+                push @object, [];
+                push @state,  ARRAY;
+            } else {
+                return undef, 'A JSON object shall be an object or array.'
+            }
+
+        } elsif ($state[$level] == OBJECT) {
+
+            if ($token == STRING) {
+                $index[$level] = $val;
+                $state[$level] = OBJECT_KEY;
+            } elsif ($token == CLOSE_BRACE) {
+                # Empty object
+                $state[$level] = LEVEL_DOWN;
+            } else {
+                return undef, 'Expect a string to be a key in the object.'
+            }
+
+        } elsif ($state[$level] == OBJECT_KEY) {
+
+            if ($token == COLON) {
+                $state[$level] = OBJECT_COLON;
+            } else {
+                return undef, 'Expect the key is followed by a colon.';
+            }
+
+        } elsif ($state[$level] == OBJECT_COLON) {
+
+            if ($token == OPEN_BRACE) {
+                $level = $level + 1;
+                push @index,  undef;
+                push @object, {};
+                push @state,  OBJECT;
+            } elsif ($token == OPEN_BRACKET) {
+                $level = $level + 1;
+                push @index,  0;
+                push @object, [];
+                push @state,  ARRAY;
+            } elsif ($token & SCALAR) {
+                my $obj = $object[$level];
+                $obj->{$index[$level]} = $val;
+                $state[$level] = OBJECT_CONTINUE;
+            } else {
+                return undef, 'Expect a value set for the key "' . $index[$level] . '"';
+            }
+
+        } elsif ($state[$level] == OBJECT_CONTINUE) {
+
+            if ($token == COMMA) {
+                $state[$level] = OBJECT;
+            } elsif ($token == CLOSE_BRACE) {
+                $state[$level] = LEVEL_DOWN;
+            } else {
+                return undef, 'Expect the end or more fields of the object.';
+            }
+
+        } elsif ($state[$level] == ARRAY) {
+
+            if ($token == OPEN_BRACE) {
+                $level = $level + 1;
+                push @index,  undef;
+                push @object, {};
+                push @state,  OBJECT;
+            } elsif ($token == OPEN_BRACKET) {
+                $level = $level + 1;
+                push @index,  0;
+                push @object, [];
+                push @state,  ARRAY;
+            } elsif ($token & SCALAR) {
+                my $obj = $object[$level];
+                push @{$obj}, $val;
+                $state[$level] = ARRAY_CONTINUE;
+            } elsif ($token == CLOSE_BRACKET) {
+                # Empty array
+                $state[$level] = LEVEL_DOWN;
+            } else {
+                return undef, 'Expect a new element of the array.'
+            }
+
+        } elsif ($state[$level] == ARRAY_CONTINUE) {
+
+            if ($token == COMMA) {
+                $state[$level] = ARRAY;
+            } elsif ($token == CLOSE_BRACKET) {
+                $state[$level] = LEVEL_DOWN;
+            } else {
+                return undef, 'Expect the end or more elements of the array.'
+            }
+
+        }
+
+        if ($state[$level] == LEVEL_DOWN) {
+            $level = $level - 1;
+            if ($level == 1) {
+                # The whole object is closed
+                last;
+            }
+
+            my $obj = $object[$level];
+            if ($state[$level] == OBJECT) {
+                $obj->{$index[$level]} = pop @object;
+            } elsif ($state[$level] == ARRAY) {
+                push @{$obj}, (pop @object);
+            }
+        }
+    } # while
+
+    if ($state[$level] == START) {
+        return $object[$level + 1], undef;
+    }
+    return undef, 'Invalid JSON object.';
+}; # $yacc
 
 sub unmarshal {
+    my $str = shift;
+    return $yacc->($str);
 } # unmarshal
 
 1;
