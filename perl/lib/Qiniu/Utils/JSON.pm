@@ -23,11 +23,16 @@ use Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
     qnc_json_marshal
+    qnc_json_unmarshal
 );
 
 sub qnc_json_marshal {
     return &marshal;
 } # qnc_json_marshal
+
+sub qnc_json_unmarshal {
+    return &unmarshal;
+} # qnc_json_unmarshal
 
 my $escape_str = sub {
     my $str = shift;
@@ -106,6 +111,7 @@ $marshal_simply = sub {
 
     # The value is a string.
     my $str = $escape_str->($val);
+    $$buf .= qq{"$val"};
     return;
 }; # marshal_simply
 
@@ -143,7 +149,7 @@ my $lex = sub {
         if ($str =~ m/\G"([^\\"]*(?:\\[^\\"]*)*)"/goc) {
             return STRING, $unescape_str->($1);
         }
-        if ($str =~ m/\G([-+]?(?:[1-9]\d*|0)(?:[.]\d+))/goc) {
+        if ($str =~ m/\G([-+]?(?:[1-9]\d*|0)(?:[.]\d+)?)/goc) {
             return NUMBER, $1 + 0;
         }
         if ($str =~ m/\Gtrue/goc) {
@@ -310,17 +316,22 @@ my $yacc = sub {
 
         if ($state[$level] == LEVEL_DOWN) {
             $level = $level - 1;
-            if ($level == 1) {
+            if ($level == 0) {
                 # The whole object is closed
                 last;
             }
 
             my $obj = $object[$level];
-            if ($state[$level] == OBJECT) {
+            if ($state[$level] == OBJECT_COLON) {
                 $obj->{$index[$level]} = pop @object;
-            } elsif ($state[$level] == ARRAY) {
+                $state[$level] = OBJECT_CONTINUE;
+            } elsif ($state[$level] == ARRAY or $state[$level] == ARRAY_CONTINUE) {
                 push @{$obj}, (pop @object);
+                $state[$level] = ARRAY_CONTINUE;
             }
+
+            pop @index;
+            pop @state;
         }
     } # while
 
