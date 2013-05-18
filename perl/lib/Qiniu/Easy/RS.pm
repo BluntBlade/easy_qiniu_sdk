@@ -46,14 +46,12 @@ sub stat {
 
     my $url = Qiniu::Easy::Conf::RS_HOST . uri_stat($bucket, $key);
     my ($ret, $err) = $self->{client}->get($url);
-    my $stat_ret = {
-        hash      => (defined($ret->{hash}))     ? $ret->{hash}     : "",
-        fsize     => (defined($ret->{fsize}))    ? $ret->{fsize}    : 0,
-        put_time  => (defined($ret->{putTime}))  ? $ret->{putTime}  : 0,
-        mime_type => (defined($ret->{mimeType})) ? $ret->{mimeType} : "",
-        customer  => (defined($ret->{customer})) ? $ret->{customer} : "",
-    };
-    return $stat_ret, undef;
+    if (defined($err)) {
+        return $ret, $err;
+    }
+
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
+    return $val, $err2;
 } # stat
 
 sub delete {
@@ -63,7 +61,12 @@ sub delete {
 
     my $url = Qiniu::Easy::Conf::RS_HOST . uri_delete($bucket, $key);
     my ($ret, $err) = $self->{client}->get($url);
-    return $ret, $err;
+    if (defined($err)) {
+        return $ret, $err;
+    }
+
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
+    return $val, $err2;
 } # delete
 
 sub move {
@@ -76,7 +79,12 @@ sub move {
     my $url = Qiniu::Easy::Conf::RS_HOST
             . uri_move($src_bucket, $src_key, $dst_bucket, $dst_key);
     my ($ret, $err) = $self->{client}->get($url);
-    return $ret, $err;
+    if (defined($err)) {
+        return $ret, $err;
+    }
+
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
+    return $val, $err2;
 } # move
 
 sub copy {
@@ -89,7 +97,12 @@ sub copy {
     my $url = Qiniu::Easy::Conf::RS_HOST
             . uri_copy($src_bucket, $src_key, $dst_bucket, $dst_key);
     my ($ret, $err) = $self->{client}->get($url);
-    return $ret, $err;
+    if (defined($err)) {
+        return $ret, $err;
+    }
+
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
+    return $val, $err2;
 } # copy
 
 sub batch {
@@ -97,7 +110,12 @@ sub batch {
     my $op   = shift;
     my $url = Qiniu::Easy::Conf::RS_HOST . '/batch';
     my ($ret, $err) = $self->{client}->post_form($url, {op => $op});
-    return $ret, $err;
+    if (defined($err)) {
+        return $ret, $err;
+    }
+
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
+    return $val, $err2;
 } # batch
 
 sub batch_stat {
@@ -136,18 +154,14 @@ sub batch_move {
 sub uri_stat {
     my $bucket = shift;
     my $key    = shift;
-    my $id = Qiniu::Utils::Base64::encode_url(
-        "${bucket}:${key}"
-    );
+    my $id = Qiniu::Utils::Base64::encode_url("${bucket}:${key}");
     return "/stat/${id}";
 } # uri_stat
 
 sub uri_delete {
     my $bucket = shift;
     my $key    = shift;
-    my $id = Qiniu::Utils::Base64::encode_url(
-        "${bucket}:${key}"
-    );
+    my $id = Qiniu::Utils::Base64::encode_url("${bucket}:${key}");
     return "/delete/${id}";
 } # uri_delete
 
@@ -157,12 +171,8 @@ sub uri_copy {
     my $dst_bucket = shift;
     my $dst_key    = shift;
 
-    my $src_id = Qiniu::Utils::Base64::encode_url(
-        "${src_bucket}:${src_key}"
-    );
-    my $dst_id = Qiniu::Utils::Base64::encode_url(
-        "${dst_bucket}:${dst_key}"
-    );
+    my $src_id = Qiniu::Utils::Base64::encode_url("${src_bucket}:${src_key}");
+    my $dst_id = Qiniu::Utils::Base64::encode_url("${dst_bucket}:${dst_key}");
     return "/copy/${src_id}/${dst_id}";
 } # uri_copy
 
@@ -172,12 +182,8 @@ sub uri_move {
     my $dst_bucket = shift;
     my $dst_key    = shift;
 
-    my $src_id = Qiniu::Utils::Base64::encode_url(
-        "${src_bucket}:${src_key}"
-    );
-    my $dst_id = Qiniu::Utils::Base64::encode_url(
-        "${dst_bucket}:${dst_key}"
-    );
+    my $src_id = Qiniu::Utils::Base64::encode_url("${src_bucket}:${src_key}");
+    my $dst_id = Qiniu::Utils::Base64::encode_url("${dst_bucket}:${dst_key}");
     return "/move/${src_id}/${dst_id}";
 } # uri_move
 
@@ -195,7 +201,7 @@ sub token_for_get {
 
     my $access_key = $args->{access_key} || Qiniu::Easy::Conf::ACCESS_KEY;
     my $secret_key = $args->{secret_key} || Qiniu::Easy::Conf::SECRET_KEY;
-    my $token = Qiniu::Easy::Auth::sign_json($access_key, $secret_key, $policy);
+    my $token = Qiniu::Easy::Auth::sign_json($access_key,$secret_key,$policy);
     return $token;
 } # token_for_get
 
