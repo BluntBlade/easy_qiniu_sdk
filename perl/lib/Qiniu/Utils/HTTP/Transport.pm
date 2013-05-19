@@ -40,13 +40,13 @@ $parse_response_body = sub {
 
 
     if ($state_data->{remainder} ne q{}) {
-        push @{$resp->{body_data}}, $state_data->{remainder};
+        push @{$resp->{body}}, $state_data->{remainder};
         $resp->{body_length} += length($state_data->{remainder});
         $state_data->{remainder} = q{};
     }
 
     if ($data ne q{}) {
-        push @{$resp->{body_data}}, $data;
+        push @{$resp->{body}}, $data;
         $resp->{body_length} += length($data);
     }
     return $parse_response_body, undef;
@@ -120,8 +120,8 @@ $parse_response_line = sub {
     if ($remainder !~ m,\s+(\d{3})\s+([^\r\n]*)\r?\n,gmoc) {
         return $parse_response_line, undef;
     }
-    $resp->{code}  = $1;
-    $resp->{msg}   = $2;
+    $resp->{code}   = $1;
+    $resp->{phrase} = $2;
 
     $state_data->{remainder} = q{};
     $data = substr($remainder, pos($remainder));
@@ -192,7 +192,7 @@ sub round_trip {
     };
     my $resp       = {
         headers     => {},
-        body_data   => [],
+        body        => [],
         body_length => 0,
     };
 
