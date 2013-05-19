@@ -39,19 +39,30 @@ sub new {
     return bless $self, $class;
 } # new
 
+my $parse_resp = sub {
+    my $resp = shift;
+    my $err  = shift;
+
+    if (defined($err)) {
+        return undef, 499, $err;
+    }
+
+    my $body = join "", @{$resp->{body}};
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($body);
+    if (defined($err2)) {
+        return undef, 499, $err2;
+    }
+    return $val, $resp->{code}, $resp->{phrase};
+}; # $parse_resp
+
 sub stat {
     my $self   = shift;
     my $bucket = shift;
     my $key    = shift;
 
     my $url = Qiniu::Easy::Conf::RS_HOST . uri_stat($bucket, $key);
-    my ($ret, $err) = $self->{client}->get($url);
-    if (defined($err)) {
-        return $ret, $err;
-    }
-
-    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
-    return $val, $err2;
+    my ($resp, $err) = $self->{client}->get($url);
+    return $parse_resp->($resp, $err);
 } # stat
 
 sub delete {
@@ -60,13 +71,8 @@ sub delete {
     my $key    = shift;
 
     my $url = Qiniu::Easy::Conf::RS_HOST . uri_delete($bucket, $key);
-    my ($ret, $err) = $self->{client}->get($url);
-    if (defined($err)) {
-        return $ret, $err;
-    }
-
-    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
-    return $val, $err2;
+    my ($resp, $err) = $self->{client}->get($url);
+    return $parse_resp->($resp, $err);
 } # delete
 
 sub move {
@@ -78,13 +84,8 @@ sub move {
 
     my $url = Qiniu::Easy::Conf::RS_HOST
             . uri_move($src_bucket, $src_key, $dst_bucket, $dst_key);
-    my ($ret, $err) = $self->{client}->get($url);
-    if (defined($err)) {
-        return $ret, $err;
-    }
-
-    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
-    return $val, $err2;
+    my ($resp, $err) = $self->{client}->get($url);
+    return $parse_resp->($resp, $err);
 } # move
 
 sub copy {
@@ -96,26 +97,16 @@ sub copy {
 
     my $url = Qiniu::Easy::Conf::RS_HOST
             . uri_copy($src_bucket, $src_key, $dst_bucket, $dst_key);
-    my ($ret, $err) = $self->{client}->get($url);
-    if (defined($err)) {
-        return $ret, $err;
-    }
-
-    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
-    return $val, $err2;
+    my ($resp, $err) = $self->{client}->get($url);
+    return $parse_resp->($resp, $err);
 } # copy
 
 sub batch {
     my $self = shift;
     my $op   = shift;
     my $url = Qiniu::Easy::Conf::RS_HOST . '/batch';
-    my ($ret, $err) = $self->{client}->post_form($url, {op => $op});
-    if (defined($err)) {
-        return $ret, $err;
-    }
-
-    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($ret);
-    return $val, $err2;
+    my ($resp, $err) = $self->{client}->post_form($url, {op => $op});
+    return $parse_resp->($resp, $err);
 } # batch
 
 sub batch_stat {
