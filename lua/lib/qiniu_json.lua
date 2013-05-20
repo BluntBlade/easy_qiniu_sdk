@@ -40,12 +40,12 @@ qiniu_json = (function ()
                   :gsub("\\\\", "\\")
     end -- __enscape_str
 
-    local function __marshal(obj)
+    local function __marshal(val)
         local val_type = type(val)
 
         if val_type == 'table' then
             if #val == 0 then
-                -- As a hash
+                -- As an object 
 
                 local tmp = {}
                 tmp[#tmp+1] = '{'
@@ -106,8 +106,8 @@ qiniu_json = (function ()
         return nil
     end -- __marshal
     
-    function t.marshal(obj)
-        return __marshal(obj)
+    function t.marshal(val)
+        return __marshal(val)
     end -- t.marshal
 
     local COMMA         = 0x001
@@ -250,7 +250,7 @@ qiniu_json = (function ()
                         state[level]  = ARRAY
                         index[level]  = 0
                     else
-                        return nil, 'A JSON object shall be a hash or array.'
+                        return nil, 'A JSON value shall be an object or array.'
                     end
 
                 elseif state[level] == OBJECT then
@@ -259,10 +259,10 @@ qiniu_json = (function ()
                         index[level] = val
                         state[level] = OBJECT_KEY
                     elseif token == CLOSE_BRACE then
-                        -- Empty hash
+                        -- Empty object
                         state[level] = LEVEL_DOWN
                     else
-                        return nil, 'Expect a string that shall be a key in hash.'
+                        return nil, 'Expect a string to be a key in the object.'
                     end
 
                 elseif state[level] == OBJECT_KEY then
@@ -300,7 +300,7 @@ qiniu_json = (function ()
                     elseif token == CLOSE_BRACE then
                         state[level] = LEVEL_DOWN
                     else
-                        return nil, 'Expect the end or more content of the hash.'
+                        return nil, 'Expect the end or more fields of the object.'
                     end
 
                 elseif state[level] == ARRAY then
@@ -349,11 +349,13 @@ qiniu_json = (function ()
                     end
 
                     local obj = object[level]
-                    if state[level] == OBJECT then
+                    if state[level] == OBJECT_COLON then
                         obj[index[level]] = object[level+1]
-                    elseif state[level] == ARRAY then
+                        state[level] = OBJECT_CONTINUE
+                    elseif state[level] == ARRAY or state[level] == ARRAY_CONTINUE then
                         index[level] = index[level] + 1
                         obj[index[level]] = object[level+1]
+                        state[level] = ARRAY_CONTINUE
                     end
                 end
             end -- if token ~= SPACES
