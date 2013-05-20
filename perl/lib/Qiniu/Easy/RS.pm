@@ -179,33 +179,41 @@ sub uri_move {
 } # uri_move
 
 sub token_for_get {
-    my $args = shift;
+    my $access_key = shift;
+    my $secret_key = shift;
+    my $args       = shift;
+
     my $policy = {};
 
     if (defined($args->{scope})) {
         $policy->{S} = $args->{scope};
     }
 
-    if (defined($args->{expires})) {
-        $policy->{E} = $args->{expires} + time();
+    if (defined($args->{deadline})) {
+        $policy->{E} = $args->{deadline} + time();
     }
 
-    my $access_key = $args->{access_key} || Qiniu::Easy::Conf::ACCESS_KEY;
-    my $secret_key = $args->{secret_key} || Qiniu::Easy::Conf::SECRET_KEY;
+    $access_key ||= Qiniu::Easy::Conf::ACCESS_KEY;
+    $secret_key ||= Qiniu::Easy::Conf::SECRET_KEY;
     my $token = Qiniu::Easy::Auth::sign_json($access_key,$secret_key,$policy);
     return $token;
 } # token_for_get
 
 sub token_for_put {
-    my $args = shift;
+    my $access_key = shift;
+    my $secret_key = shift;
+    my $args       = shift;
+
     my $policy = {};
 
     if (defined($args->{scope})) {
         $policy->{scope} = $args->{scope};
     }
 
-    if (defined($args->{expires})) {
-        $policy->{expires} = $args->{expires} + time();
+    if (defined($args->{deadline})) {
+        $policy->{deadline} = time() + $args->{deadline};
+    } else {
+        $policy->{deadline} = time() + 3600;
     }
 
     if (defined($args->{callback_url})) {
@@ -240,9 +248,9 @@ sub token_for_put {
         $policy->{detect_mime} = $args->{detectMime};
     }
 
-    my $access_key = $args->{access_key} || Qiniu::Easy::Conf::ACCESS_KEY;
-    my $secret_key = $args->{secret_key} || Qiniu::Easy::Conf::SECRET_KEY;
-    my $token = Qiniu::Easy::Auth::sign_json($access_key, $secret_key, $policy);
+    $access_key ||= Qiniu::Easy::Conf::ACCESS_KEY;
+    $secret_key ||= Qiniu::Easy::Conf::SECRET_KEY;
+    my $token = Qiniu::Easy::Auth::sign_json($access_key,$secret_key,$policy);
     return $token;
 } # token_for_put
 
