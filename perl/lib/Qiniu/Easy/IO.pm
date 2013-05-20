@@ -19,6 +19,7 @@ use strict;
 use warnings;
 
 use English;
+use IO::File;
 
 use Qiniu::Utils::Base64;
 use Qiniu::Utils::JSON;
@@ -87,24 +88,45 @@ sub put {
     }
     
     my $new_data = undef;
-    my $data_type = ref($new_data);
-    if ($data_type eq q{}) {
+    my $data_type = ref($data);
+    if ($data_type eq q{SCALAR} or $data_type eq q{}) {
         my $done = undef;
         $new_data = {
             read => sub {
                 if ($done) {
-                    return q{};
+                    return q{}, undef;
                 }
                 $done = 1;
-                return $data;
+                return $data, undef;
             },
         };
     } elsif ($data_type eq q{CODE}) {
         $new_data = {
             read => $data,
-        }
+        };
     } elsif ($data_type eq q{HASH}) {
         $new_data = $data;
+    } elsif ($data_type eq q{IO::File}) {
+        my $done = undef;
+        $new_data = {
+            read => sub {
+                if ($done) {
+                    return q{}, undef;
+                }
+
+                my $read = $data->sysread(my $buf, 4096);
+                if (not defined($read)) {
+                    $data->close();
+                    return undef, "${OS_ERROR}";
+                }
+                if ($read == 0) {
+                    $data->close();
+                    $done = 1;
+                    return q{}, undef;
+                }
+                return $buf, undef;
+            },
+        };
     } else {
         return undef, 499, q{Invalid data type};
     }
@@ -112,15 +134,15 @@ sub put {
     my $source = {
         read => sub {
             if ($source_done) {
-                return q{};
+                return q{}, undef;
             }
 
-            my $content = $multipart->read();
+            my ($content, $err) = $multipart->read();
             if ($content ne q{}) {
-                return $content;
+                return $content, $err;
             }
 
-            my ($chunk, $err) = $new_data->{read}->();
+            (my $chunk, $err) = $new_data->{read}->();
             if (defined($err)) {
                 return undef, $err;
             }
@@ -135,8 +157,8 @@ sub put {
                 $multipart->end();
             }
 
-            $content = $multipart->read();
-            return $content;
+            ($content, $err) = $multipart->read();
+            return $content, $err;
         },
     };
 
@@ -164,29 +186,13 @@ sub put_file {
     my $local_file = shift;
     my $extra      = shift;
 
-    my $err = open(my $fh, "<", $local_file);
-    if (not defined($err)) {
+    my $fh = IO::File->new($local_file, "r");
+    if (not defined($fh)) {
         return undef, "$OS_ERROR";
     }
-    binmode($fh);
+    $fh->binmode();
 
-    my $data = {
-        read => sub {
-            my $chunk = q{};
-            my $bytes = sysread($fh, $chunk, 4096);
-            if (not defined($bytes)) {
-                close($fh);
-                return undef, "$OS_ERROR";
-            }
-            if ($bytes == 0) {
-                close($fh);
-                return q{}, undef;
-            }
-            return $chunk, undef;
-        },
-    };
-
-    return put($uptoken, $key, $data, $extra);
+    return put($uptoken, $key, $fh, $extra);
 } # put_file
 
 1;

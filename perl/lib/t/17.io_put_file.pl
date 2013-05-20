@@ -10,8 +10,7 @@ my $access_key = shift @ARGV;
 my $secret_key = shift @ARGV;
 my $bucket     = shift @ARGV;
 my $key        = shift @ARGV;
-
-my $data = qq{This is a test file from Qiniu Easy Perl SDK.\n};
+my $file       = shift @ARGV;
 
 my $policy = {
     scope => $bucket,
@@ -27,10 +26,10 @@ my $extra = {
     bucket    => $bucket,
     mime_type => q{text/plain},
 };
-my ($ret, $code, $phrase) = Qiniu::Easy::IO::put(
+my ($ret, $code, $phrase) = Qiniu::Easy::IO::put_file(
     $uptoken,
     $key,
-    $data,
+    $file,
     $extra,
 );
 
