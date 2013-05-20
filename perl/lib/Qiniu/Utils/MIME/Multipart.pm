@@ -31,6 +31,7 @@ my $gen_boundary = sub {
     my $boundary = join "", map {
         sprintf("%08X", $_)
     } unpack("N" x 5, Qiniu::Utils::SHA1->new()->sum($rand));
+    return $boundary;
 }; # gen_boundary
 
 sub new {
@@ -52,17 +53,24 @@ sub field {
 
     my $headers = $extra->{headers} || {};
 
-    my $content_type = $headers->{content_type}
-                    || q{text/plain; charset=utf-8};
-    my $content_transfer_encoding = $headers->{content_transfer_encoding}
-                                 || q{8bit};
+    my $content_type = $headers->{content_type};
+    my $content_transfer_encoding = $headers->{content_transfer_encoding};
+
+    if (defined($content_type) and
+        $content_type =~ m,application/x-www-form-urlencoded,io) {
+        $value =~ s/([!#\$&'\(\)*+,\/:;=?@\[\]])/sprintf("%%%02X", ord($1))/goe;
+    }
 
     my $part  = "";
     $part .= q{--} . $self->{boundary} . LINEBREAK;
     $part .= qq(Content-Disposition: form-data; name="${name}") . LINEBREAK;
-    $part .= qq(Content-Type: ${content_type}) . LINEBREAK;
-    $part .= qq(Content-Transfer-Encoding: ${content_transfer_encoding})
-           . LINEBREAK;
+    if (defined($content_type)) {
+        $part .= qq(Content-Type: ${content_type}) . LINEBREAK;
+    }
+    if (defined($content_transfer_encoding)) {
+        $part .= qq(Content-Transfer-Encoding: ${content_transfer_encoding})
+               . LINEBREAK;
+    }
     $part .= LINEBREAK;
     $part .= $value . LINEBREAK;
 
@@ -85,7 +93,7 @@ sub form_file {
     my $part  = "";
     $part .= q{--} . $self->{boundary} . LINEBREAK;
     $part .= qq(Content-Disposition: form-data;)
-           . qq( name="${name}")
+           . qq( name="${name}";)
            . qq( filename="${value}")
            . LINEBREAK;
     $part .= qq(Content-Type: ${content_type}) . LINEBREAK;
@@ -107,7 +115,7 @@ sub form_file {
 
 sub end {
     my $self = shift;
-    push @{$self->{parts}}, q{--} . $self->{boundary} . q{--} . LINEBREAK;
+    push @{$self->{parts}}, LINEBREAK . q{--} . $self->{boundary} . q{--} . LINEBREAK;
 } # end
 
 sub read {
@@ -117,7 +125,8 @@ sub read {
 } # read
 
 sub content_type {
-    return q{multipart/form-data};
+    my $self = shift;
+    return q{multipart/form-data; boundary=} . $self->{boundary};
 } # content_type
 
 1;

@@ -60,7 +60,7 @@ sub sign {
     my $digest = $hmac->sum();
     my $encoded_digest = Qiniu::Utils::Base64::encode_url($digest);
 
-    return "${access_key}:${encoded_digest}:${encoded_buf}", undef;
+    return "${access_key}:${encoded_digest}:${encoded_buf}";
 } # sign
 
 sub sign_json {

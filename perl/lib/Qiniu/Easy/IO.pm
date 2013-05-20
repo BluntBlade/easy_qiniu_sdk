@@ -21,7 +21,8 @@ use warnings;
 use English;
 
 use Qiniu::Utils::Base64;
-use Qiniu::Utils::HTTPClient;
+use Qiniu::Utils::JSON;
+use Qiniu::Utils::HTTP::Client;
 use Qiniu::Utils::MIME::Multipart;
 
 use Qiniu::Easy::Conf;
@@ -34,8 +35,14 @@ sub put {
 
     ######
     my $bucket = $extra->{bucket};
+
+    # 可选。在 uptoken 没有指定 DetectMime 时，用户客户端可自己指定 MimeType
     my $mt     = $extra->{mime_type}       || $extra->{mimeType};
+    
+    # 可选。用户自定义 Meta，不能超过 256 字节
     my $meta   = $extra->{custom_meta}     || $extra->{customMeta};
+
+    # 当 uptoken 指定了 CallbackUrl，则 CallbackParams 必须非空
     my $params = $extra->{callback_params} || $extra->{callbackParams};
 
     ######
@@ -53,12 +60,12 @@ sub put {
     my $action = "/rs-put/${id}";
 
     if (defined($mt) && $mt ne q{}) {
-        my $mt = Qiniu::Utils::Base64::encode_url($mt);
-        $action .= "/mimeType/${mt}";
+        my $encoded_mt = Qiniu::Utils::Base64::encode_url($mt);
+        $action .= "/mimeType/${encoded_mt}";
     }
     if (defined($meta) && $meta ne q{}) {
-        $meta = Qiniu::Utils::Base64::encode_url($meta);
-        $action .= "/meta/${meta}";
+        my $encoded_meta = Qiniu::Utils::Base64::encode_url($meta);
+        $action .= "/meta/${encoded_meta}";
     }
 
     $err = $multipart->field('action', $action);
@@ -79,32 +86,76 @@ sub put {
         return undef, $err;
     }
     
+    my $new_data = undef;
+    my $data_type = ref($new_data);
+    if ($data_type eq q{}) {
+        my $done = undef;
+        $new_data = {
+            read => sub {
+                if ($done) {
+                    return q{};
+                }
+                $done = 1;
+                return $data;
+            },
+        };
+    } elsif ($data_type eq q{CODE}) {
+        $new_data = {
+            read => $data,
+        }
+    } elsif ($data_type eq q{HASH}) {
+        $new_data = $data;
+    } else {
+        return undef, 499, q{Invalid data type};
+    }
+    my $source_done = undef;
     my $source = {
         read => sub {
-            my ($chunk, $err) = $data->read();
+            if ($source_done) {
+                return q{};
+            }
+
+            my $content = $multipart->read();
+            if ($content ne q{}) {
+                return $content;
+            }
+
+            my ($chunk, $err) = $new_data->{read}->();
             if (defined($err)) {
                 return undef, $err;
             }
 
-            $err = $buf->write($chunk);
-            if (defined($err)) {
-                return undef, $err;
-            }
-
-            if ($chunk eq q{}) {
+            if ($chunk ne q{}) {
+                $err = $buf->{write}->($chunk);
+                if (defined($err)) {
+                    return undef, $err;
+                }
+            } else {
+                $source_done = 1;
                 $multipart->end();
             }
 
-            return $multipart->read();
+            $content = $multipart->read();
+            return $content;
         },
     };
 
-    (my $ret, $err) = Qiniu::Utils::HTTPClient::post(
+    (my $resp, $err) = Qiniu::Utils::HTTP::Client::default_post(
         Qiniu::Easy::Conf::UP_HOST . '/upload',
-        $multipart->content_type(),
-        $source
+        $source,
+        $multipart->content_type()
     );
-    return $ret, $err;
+
+    if (defined($err)) {
+        return undef, 499, $err;
+    }
+
+    my $body = join "", @{$resp->{body}};
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($body);
+    if (defined($err2)) {
+        return undef, 499, $err2;
+    }
+    return $val, $resp->{code}, $resp->{phrase};
 } # put
 
 sub put_file {
