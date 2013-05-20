@@ -38,7 +38,6 @@ $parse_response_body = sub {
         return undef, undef;
     }
 
-
     if ($state_data->{remainder} ne q{}) {
         push @{$resp->{body}}, $state_data->{remainder};
         $resp->{body_length} += length($state_data->{remainder});
@@ -146,9 +145,9 @@ sub round_trip {
     }
 
     my $host    = $req->{url}{host} || "";
-    my $port    = $req->{url}{port}   || "";
-    my $path    = $req->{url}{path}   || "";
-    my $headers = $req->{headers}     || {};
+    my $port    = $req->{url}{port} || "";
+    my $path    = $req->{url}{path} || "";
+    my $headers = $req->{headers}   || {};
     my $body    = $req->{body};
 
     my $socket = IO::Socket::INET->new(
@@ -176,7 +175,16 @@ sub round_trip {
     $socket->send(LINEBREAK);
 
     if (defined($body) and defined($body->{read})) {
-        while (my ($data, $read) = $body->{read}->(4096)) {
+        while (1) {
+            my ($data, $err) = $body->{read}->(4096);
+            if (defined($err)) {
+                return undef, $err;
+            }
+
+            if ($data eq q{}) {
+                last;
+            }
+
             my $sent = $socket->send($data);
             if (not defined($sent)) {
                 $socket->close();
