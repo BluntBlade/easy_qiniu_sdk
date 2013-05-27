@@ -20,6 +20,7 @@ package Qiniu::Utils::MIME::Multipart;
 
 use strict;
 use warnings;
+
 use English;
 
 use Qiniu::Utils::SHA1;
@@ -37,6 +38,7 @@ my $gen_boundary = sub {
 sub new {
     my $class = shift || __PACKAGE__;
     my $self = {
+        done     => undef,
         parts    => [],
         boundary => $gen_boundary->(),
     };
@@ -82,6 +84,7 @@ sub form_file {
     my $self  = shift;
     my $name  = shift;
     my $value = shift;
+    my $data  = shift;
     my $extra = shift || {};
 
     my $headers = $extra->{headers} || {};
@@ -102,24 +105,42 @@ sub form_file {
     $part .= LINEBREAK;
 
     push @{$self->{parts}}, $part;
+    push @{$self->{parts}}, $data;
 
-    my $buf = {
-        write => sub {
-            my $data = shift;
-            push @{$self->{parts}}, $data;
-            return undef;
-        },
-    };
-    return $buf, undef;
+    return undef;
 } # form_file
 
-sub end {
-    my $self = shift;
-    push @{$self->{parts}}, LINEBREAK . q{--} . $self->{boundary} . q{--} . LINEBREAK;
-} # end
-
 sub read {
-    my $self = shift;
+    my $self  = shift;
+    my $bytes = shift || 4096;
+
+    if ($self->{done}) {
+        return q{}, undef;
+    }
+    if (scalar(@{$self->{parts}}) == 0) {
+        $self->{done} = 1;
+        my $part = LINEBREAK . q{--} . $self->{boundary} . q{--} . LINEBREAK;
+        return $part, undef;
+    }
+
+    my $part_type = ref($self->{parts}[0]);
+    if ($part_type eq q{HASH}) {
+        my ($part, $err) = $self->{parts}[0]{read}->($bytes);
+        if (defined($err)) {
+            return undef, $err;
+        }
+
+        if ($part eq q{}) {
+            if (exists($self->{parts}[0]{close})) {
+                $self->{parts}[0]{close}->();
+            }
+            shift @{$self->{parts}};
+            return $self->read($bytes);
+        }
+
+        return $part, undef;
+    }
+
     my $part = (shift @{$self->{parts}}) || q{};
     return $part;
 } # read

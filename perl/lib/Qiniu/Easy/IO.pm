@@ -82,11 +82,6 @@ sub put {
         }
     }
 
-    (my $buf, $err) = $multipart->form_file('file', $key);
-    if (defined($err)) {
-        return undef, $err;
-    }
-    
     my $new_data = undef;
     my $data_type = ref($data);
     if ($data_type eq q{SCALAR} or $data_type eq q{}) {
@@ -130,41 +125,19 @@ sub put {
     } else {
         return undef, 499, q{Invalid data type};
     }
-    my $source_done = undef;
-    my $source = {
-        read => sub {
-            if ($source_done) {
-                return q{}, undef;
-            }
 
-            my ($content, $err) = $multipart->read();
-            if ($content ne q{}) {
-                return $content, $err;
-            }
-
-            (my $chunk, $err) = $new_data->{read}->();
-            if (defined($err)) {
-                return undef, $err;
-            }
-
-            if ($chunk ne q{}) {
-                $err = $buf->{write}->($chunk);
-                if (defined($err)) {
-                    return undef, $err;
-                }
-            } else {
-                $source_done = 1;
-                $multipart->end();
-            }
-
-            ($content, $err) = $multipart->read();
-            return $content, $err;
-        },
-    };
+    $err = $multipart->form_file('file', $key, $new_data);
+    if (defined($err)) {
+        return undef, $err;
+    }
 
     (my $resp, $err) = Qiniu::Utils::HTTP::Client::default_post(
         Qiniu::Easy::Conf::UP_HOST . '/upload',
-        $source,
+        {
+            read => sub {
+                return $multipart->read();
+            },
+        },
         $multipart->content_type()
     );
 
