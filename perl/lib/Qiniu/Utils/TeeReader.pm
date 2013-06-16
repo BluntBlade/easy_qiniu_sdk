@@ -15,6 +15,9 @@
 
 package Qiniu::Utils::TeeReader;
 
+use strict;
+use warnings;
+
 sub new {
     my $class = shift || __PACKAGE__;
     my $in    = shift;
