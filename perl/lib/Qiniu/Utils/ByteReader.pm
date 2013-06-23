@@ -4,7 +4,7 @@
 #
 # Easy Qiniu Perl SDK
 #
-# Module: Qiniu/Utils/TeeReader.pm
+# Module: Qiniu/Utils/ByteReader.pm
 #
 # Author: LIANG Tao
 # Weibo:  @无锋之刃
@@ -13,7 +13,7 @@
 #
 ##############################################################################
 
-package Qiniu::Utils::TeeReader;
+package Qiniu::Utils::ByteReader;
 
 use strict;
 use warnings;
@@ -21,12 +21,10 @@ use warnings;
 sub new {
     my $class = shift || __PACKAGE__;
     my $in    = shift;
-    my $out   = shift;
     my $self  = {
         in      => $in,
-        out     => $out,
-        in_type => ref($in),
-
+        pos     => 0,
+        len     => length($in),
         done    => undef,
     };
     return bless $self, $class;
@@ -40,33 +38,32 @@ sub read {
         return q{}, undef;
     }
 
-    my $data = undef;
-    my $err  = undef;
-
-    if ($self->{in_type} eq q{HASH}) {
-        ($data, $err) = $self->{in}{read}($bytes);
-    } else {
-        ($data, $err) = $self->{in}->read($bytes);
-    }
-    if (defined($err)) {
-        return undef, $err;
-    }
-
+    my $data = substr($self->{in}, $self->{pos}, $bytes);
     my $read_bytes = length($data);
     if ($read_bytes > 0) {
-        $self->{out}->write($data);
+        $self->{pos} += $read_bytes;
     }
 
-    if ($read_bytes == 0) {
+    if ($self->{pos} == $self->{len}) {
         $self->{done} = 1;
     }
 
     return $data, undef;
 } # read
 
-sub close {
-    # do nothing
-} # close
+sub read_at {
+    my $self   = shift;
+    my $offset = shift;
+    my $bytes  = shift || 4096;
+
+    my $data = substr($self->{in}, $offset, $bytes);
+    return $data, undef;
+} # read_at
+
+sub size {
+    my $self = shift;
+    return $self->{len};
+} # size
 
 1;
 

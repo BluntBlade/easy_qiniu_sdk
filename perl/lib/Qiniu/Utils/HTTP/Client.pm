@@ -24,7 +24,7 @@ use IO::File;
 use Qiniu::Utils::SHA1;
 use Qiniu::Utils::HTTP::Transport;
 
-use constant BODY_LIMIT => 1 << 22;
+use constant BODY_LIMIT => 1 << 23;
 
 my $mktemp = sub {
     my $template = shift;
@@ -59,7 +59,7 @@ my $load_body = sub {
 
         $body_type = ref($body);
 
-    } elsif ($body_type eq q{HASH} or $body_type eq q{IO}) {
+    } elsif ($body_type eq q{HASH} or $body_type eq q{IO} or $body_type =~ m/::/) {
 
         my $new_body = [];
         my $body_fh  = undef;
@@ -75,12 +75,19 @@ my $load_body = sub {
                 }
 
                 $body_piece_length = length($body_piece);
-            } else {
+            } elsif ($body_type eq q{IO}) {
                 $body_piece_length = $body->read($body_piece, 4096);
                 if (not defined($body_piece_length)) {
                     $body->close();
                     return "${OS_ERROR}";
                 }
+            } else {
+                ($body_piece, my $err) = $body->read(4096);
+                if (defined($err)) {
+                    return $err;
+                }
+
+                $body_piece_length = length($body_piece);
             }
 
             if ($body_piece_length == 0) {
