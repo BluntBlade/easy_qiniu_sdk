@@ -33,7 +33,8 @@ sub new {
     my $in_type = ref($in);
     if ($in_type eq q{SCALAR} or $in_type eq q{}) {
 
-        $self->{in} = IO::File->open($in, "<");
+        $self->{in} = IO::File->new();
+        $self->{in}->open($in, "<");
         if (not defined($self->{in})) {
             warn "${OS_ERROR}";
         }
@@ -76,8 +77,9 @@ sub read_at {
         return q{}, undef;
     }
 
+    $self->{in}->seek($offset, SEEK_SET);
     my $data       = undef;
-    my $read_bytes = $self->{in}->sysread($data, $bytes, $offset);
+    my $read_bytes = $self->{in}->sysread($data, $bytes);
     if (not defined($read_bytes)) {
         return undef, "${OS_ERROR}";
     }
@@ -101,6 +103,11 @@ sub read {
 
     return $data, undef;
 } # read
+
+sub size {
+    my $self = shift;
+    return ($self->{in}->stat())[7];
+} # size
 
 1;
 

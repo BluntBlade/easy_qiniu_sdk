@@ -357,7 +357,10 @@ sub put {
 
     my $blk_cnt = block_count($fsize);
     if (not defined($extra->{progresses})) {
-        $extra->{progresses} = [({}) x $blk_cnt];
+        $extra->{progresses} = [];
+        for (my $i = 0; $i < $blk_cnt; ++$i) {
+            push @{$extra->{progresses}}, {};
+        } # for
     } elsif (scalar(@{$extra->{progresses}}) != $blk_cnt) {
         return undef, "invalid put progress";
     }
