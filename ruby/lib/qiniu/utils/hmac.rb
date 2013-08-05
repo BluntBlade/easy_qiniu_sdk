@@ -9,8 +9,8 @@
 #
 # Author: LIANG Tao
 # Weibo:  @无锋之刃
-# Email:  amethyst.black@gmail.com
-#         liangtao@qiniu.com
+# Email:  liangtao@qiniu.com
+#         amethyst.black@gmail.com
 #
 # Wiki:   http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
 #
