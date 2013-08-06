@@ -116,9 +116,10 @@ sub mkblock {
     my $blk_size = shift;
     my $body     = shift;
     my $size     = shift;
+    my $up_host  = shift;
 
     my ($resp, $err) = $client->post(
-        Qiniu::Easy::Conf::UP_HOST . "/mkblk/${blk_size}",
+        $up_host . "/mkblk/${blk_size}",
         $body,
         "application/octet-stream",
     );
@@ -162,6 +163,8 @@ sub resumable_blockput {
     my $blk_size = shift;
     my $extra    = shift || {};
 
+    my $up_host = $extra->{up_host} || Qiniu::Easy::Conf::UP_HOST;
+
     my $h = Qiniu::Utils::CRC32->new();
     my $off_base = $blk_idx << BLOCK_BITS;
     my $chk_size = $extra->{chunk_size} || $extra->{chunkSize} || CHUNK_SIZE;
@@ -177,7 +180,7 @@ sub resumable_blockput {
         my $body1 = Qiniu::Utils::SectionReader->new($f, $off_base, $body_len);
         my $body  = Qiniu::Utils::TeeReader->new($body1, $h);
 
-        my ($ret, $code, $phrase) = mkblock($client, $blk_size, $body, $body_len);
+        my ($ret, $code, $phrase) = mkblock($client, $blk_size, $body, $body_len, $up_host);
         if ($code >= 400) {
             return $ret, $code, $phrase;
         }
@@ -250,8 +253,10 @@ sub mkfile {
     my $fsize  = shift;
     my $extra  = shift;
 
+    my $up_host = $extra->{up_host} || Qiniu::Easy::Conf::UP_HOST;
+
     my $entry = "$extra->{bucket}:${key}";
-    my $url = Qiniu::Easy::Conf::UP_HOST
+    my $url = $up_host
             . "/rs-mkfile/"
             . Qiniu::Utils::Base64::encode_url($entry)
             . "/fsize/${fsize}";

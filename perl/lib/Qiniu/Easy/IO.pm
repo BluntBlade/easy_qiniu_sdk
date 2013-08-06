@@ -45,6 +45,8 @@ sub put {
 
     # 当 uptoken 指定了 CallbackUrl，则 CallbackParams 必须非空
     my $params = $extra->{callback_params} || $extra->{callbackParams};
+    
+    my $up_host = $extra->{up_host} || Qiniu::Easy::Conf::UP_HOST;
 
     ######
     my $err       = undef;
@@ -132,7 +134,7 @@ sub put {
     }
 
     (my $resp, $err) = Qiniu::Utils::HTTP::Client::default_post(
-        Qiniu::Easy::Conf::UP_HOST . '/upload',
+        $up_host . '/upload',
         {
             read => sub {
                 return $multipart->read();
