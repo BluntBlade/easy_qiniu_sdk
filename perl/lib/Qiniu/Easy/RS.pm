@@ -25,12 +25,14 @@ use Qiniu::Easy::Conf;
 
 ### OOP methods
 sub new {
-    my $class = shift || __PACKAGE__;
+    my $class      = shift || __PACKAGE__;
     my $access_key = shift || Qiniu::Easy::Conf::ACCESS_KEY;
     my $secret_key = shift || Qiniu::Easy::Conf::SECRET_KEY;
+    my $rs_host    = shift || Qiniu::Easy::Conf::RS_HOST;
     my $self = {
         access_key => $access_key,
         secret_key => $secret_key,
+        rs_host    => $rs_host,
     };
     $self->{client} = Qiniu::Easy::Auth::new_client(
         $access_key,
@@ -60,7 +62,7 @@ sub stat {
     my $bucket = shift;
     my $key    = shift;
 
-    my $url = Qiniu::Easy::Conf::RS_HOST . uri_stat($bucket, $key);
+    my $url = $self->{rs_host} . uri_stat($bucket, $key);
     my ($resp, $err) = $self->{client}->get($url);
     return $parse_resp->($resp, $err);
 } # stat
@@ -70,7 +72,7 @@ sub delete {
     my $bucket = shift;
     my $key    = shift;
 
-    my $url = Qiniu::Easy::Conf::RS_HOST . uri_delete($bucket, $key);
+    my $url = $self->{rs_host} . uri_delete($bucket, $key);
     my ($resp, $err) = $self->{client}->get($url);
     return $parse_resp->($resp, $err);
 } # delete
@@ -82,7 +84,7 @@ sub move {
     my $dst_bucket = shift;
     my $dst_key    = shift;
 
-    my $url = Qiniu::Easy::Conf::RS_HOST
+    my $url = $self->{rs_host}
             . uri_move($src_bucket, $src_key, $dst_bucket, $dst_key);
     my ($resp, $err) = $self->{client}->get($url);
     return $parse_resp->($resp, $err);
@@ -95,7 +97,7 @@ sub copy {
     my $dst_bucket = shift;
     my $dst_key    = shift;
 
-    my $url = Qiniu::Easy::Conf::RS_HOST
+    my $url = $self->{rs_host}
             . uri_copy($src_bucket, $src_key, $dst_bucket, $dst_key);
     my ($resp, $err) = $self->{client}->get($url);
     return $parse_resp->($resp, $err);
@@ -104,7 +106,7 @@ sub copy {
 sub batch {
     my $self = shift;
     my $op   = shift;
-    my $url = Qiniu::Easy::Conf::RS_HOST . '/batch';
+    my $url = $self->{rs_host} . '/batch';
     my ($resp, $err) = $self->{client}->post_form($url, {op => $op});
     return $parse_resp->($resp, $err);
 } # batch
