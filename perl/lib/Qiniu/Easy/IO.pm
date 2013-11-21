@@ -170,6 +170,129 @@ sub put_file {
     return put($uptoken, $key, $fh, $extra);
 } # put_file
 
+sub put2 {
+    my $uptoken = shift;
+    my $key     = shift;
+    my $data    = shift;
+    my $up_host = shift;
+    my $extra   = shift;
+
+    ######
+    $up_host ||= Qiniu::Easy::Conf::UP_HOST;
+
+    ######
+    my $err       = undef;
+    my $multipart = Qiniu::Utils::MIME::Multipart->new();
+
+    ###
+    $err = $multipart->field("token", $uptoken);
+    if (defined($err)) {
+        return undef, $err;
+    }
+
+    $err = $multipart->field("key", $key);
+    if (defined($err)) {
+        return undef, $err;
+    }
+
+    foreach my $k (keys(%$extra)) {
+        $err = $multipart->field($k, $extra->{$k});
+        if (defined($err)) {
+            return undef, $err;
+        }
+    } # foreach
+
+    my $new_data = undef;
+    my $data_type = ref($data);
+    if ($data_type eq q{SCALAR} or $data_type eq q{}) {
+        my $done = undef;
+        $new_data = {
+            read => sub {
+                if ($done) {
+                    return q{}, undef;
+                }
+                $done = 1;
+                return $data, undef;
+            },
+        };
+    } elsif ($data_type eq q{CODE}) {
+        $new_data = {
+            read => $data,
+        };
+    } elsif ($data_type eq q{HASH}) {
+        $new_data = $data;
+    } elsif ($data_type eq q{IO::File}) {
+        my $done = undef;
+        $new_data = {
+            read => sub {
+                if ($done) {
+                    return q{}, undef;
+                }
+
+                my $read = $data->sysread(my $buf, 4096);
+                if (not defined($read)) {
+                    $data->close();
+                    return undef, "${OS_ERROR}";
+                }
+                if ($read == 0) {
+                    $data->close();
+                    $done = 1;
+                    return q{}, undef;
+                }
+                return $buf, undef;
+            },
+        };
+    } else {
+        return undef, 499, q{Invalid data type};
+    }
+
+    $err = $multipart->form_file('file', $key, $new_data);
+    if (defined($err)) {
+        return undef, $err;
+    }
+
+    if ($up_host !~ m,/$,) {
+        $up_host .= "/";
+    }
+
+    (my $resp, $err) = Qiniu::Utils::HTTP::Client::default_post(
+        $up_host,
+        {
+            read => sub {
+                return $multipart->read();
+            },
+        },
+        $multipart->content_type()
+    );
+
+    if (defined($err)) {
+        return undef, 499, $err;
+    }
+
+    my $body = join "", @{$resp->{body}};
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($body);
+    if (defined($err2)) {
+        return undef, 499, $err2;
+    }
+    return $val, $resp->{code}, $resp->{phrase};
+} # put2
+
+sub put2_file {
+    my $uptoken    = shift;
+    my $key        = shift;
+    my $local_file = shift;
+    my $up_host    = shift;
+    my $extra      = shift;
+
+    my $fh = IO::File->new($local_file, "r");
+    if (not defined($fh)) {
+        return undef, "$OS_ERROR";
+    }
+    $fh->binmode();
+
+    return put2($uptoken, $key, $fh, $up_host, $extra);
+} # put2_file
+
 1;
 
 __END__

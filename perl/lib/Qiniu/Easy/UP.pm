@@ -283,6 +283,52 @@ sub mkfile {
     return $ret, $code, $phrase;
 } # mkfile
 
+sub mkfile2 {
+    my $uptoken    = shift;
+    my $key        = shift;
+    my $fsize      = shift;
+    my $up_host    = shift;
+    my $progresses = shift;
+    my $uservars   = shift;
+
+    my $url = $up_host
+            . "/mkfile/${fsize}"
+            . "/key/" . Qiniu::Utils::Base64::encode_url($key)
+            ;
+
+    my $mt = $uservars->{mime_type} || $uservars->{mimeType};
+    if (defined($mt) and $mt eq q{}) {
+        $url .= "/mimeType/" . Qiniu::Utils::Base64::encode_url($mt);
+    }
+
+    foreach my $k (keys(%$uservars)) {
+        $url .= "/$k/" . Qiniu::Utils::Base64::encode_url($uservars->{$k});
+    } # foreach
+
+    my $buf  = join(",", map { $_->{ctx} } @{$progresses});
+    my $body = Qiniu::Utils::ByteReader->new($buf);
+
+    my ($resp, $err) = Qiniu::Utils::HTTP::Client::default_post(
+        $url,
+        $buf,
+        "text/plain",
+        {
+            "Authorization" => "UpToken ${uptoken}",
+        },
+    );
+
+    if (defined($err)) {
+        return undef, 499, $err;
+    }
+
+    my $body2 = join "", @{$resp->{body}};
+    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($body2);
+    if (defined($err2)) {
+        return undef, 499, $err2;
+    }
+    return $val, $resp->{code}, $resp->{phrase};
+} # mkfile2
+
 my $put_one_block = sub {
     my $client   = shift;
     my $f        = shift;
