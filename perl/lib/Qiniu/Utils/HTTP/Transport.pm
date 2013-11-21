@@ -147,6 +147,7 @@ sub round_trip {
     my $host    = $req->{url}{host} || "";
     my $port    = $req->{url}{port} || "";
     my $path    = $req->{url}{path} || "";
+    my $query_str = $req->{url}{query_str} || "";
     my $headers = $req->{headers}   || {};
     my $body    = $req->{body};
 
@@ -162,7 +163,11 @@ sub round_trip {
     }
 
     my $method = uc($req->{method});
-    $socket->send(qq(${method} ${path} HTTP/1.1) . LINEBREAK);
+    my $uri = "${path}";
+    if ($query_str ne "") {
+        $uri .= "?${query_str}";
+    }
+    $socket->send(qq(${method} ${uri} HTTP/1.1) . LINEBREAK);
 
     foreach my $h (keys(%{$headers})) {
         my $vs = $headers->{$h};

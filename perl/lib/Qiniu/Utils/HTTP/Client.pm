@@ -238,8 +238,12 @@ my $call = sub {
     }
 
     if (defined($headers)) {
-        foreach my $key (%$headers) {
-            $req->{headers}{$key} = $headers->{$key};
+        foreach my $key (keys(%$headers)) {
+            if (ref($headers->{$key}) eq q{}) {
+                $req->{headers}{$key} = [$headers->{$key}];
+            } elsif (ref($headers->{$key}) eq q{ARRAY}) {
+                $req->{headers}{$key} = $headers->{$key};
+            }
         } # foreach
     }
 
@@ -276,7 +280,8 @@ sub post {
     my $url  = shift;
     my $body = shift;
     my $ct   = shift || q{application/octet-stream};
-    return $self->$call(q{POST}, $url, $body, $ct);
+    my $headers = shift;
+    return $self->$call(q{POST}, $url, $body, $ct, $headers);
 } # post
 
 sub default_get {
