@@ -205,6 +205,7 @@ my $call = sub {
     my $url    = shift;
     my $body   = shift;
     my $ct     = shift;
+    my $headers = shift;
 
     if ($url !~ m,^(?:https?://)?([^/]+)(.*)$,o) {
         return undef, qq{Invalid URL. [$url]};
@@ -234,6 +235,12 @@ my $call = sub {
 
     if (defined($ct)) {
         $req->{headers}{'Content-Type'} = [$ct];
+    }
+
+    if (defined($headers)) {
+        foreach my $key (%$headers) {
+            $req->{headers}{$key} = $headers->{$key};
+        } # foreach
     }
 
     if (defined($body)) {
