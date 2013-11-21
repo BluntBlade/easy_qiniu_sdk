@@ -284,19 +284,18 @@ sub mkfile {
 } # mkfile
 
 sub mkfile2 {
-    my $uptoken    = shift;
+    my $client     = shift;
     my $key        = shift;
     my $fsize      = shift;
-    my $up_host    = shift;
-    my $progresses = shift;
+    my $extra      = shift;
     my $uservars   = shift;
 
-    my $url = $up_host
+    my $url = $extra->{up_host}
             . "/mkfile/${fsize}"
             . "/key/" . Qiniu::Utils::Base64::encode_url($key)
             ;
 
-    my $mt = $uservars->{mime_type} || $uservars->{mimeType};
+    my $mt = $extra->{mime_type} || $extra->{mimeType} || "application/octet-stream";
     if (defined($mt) and $mt eq q{}) {
         $url .= "/mimeType/" . Qiniu::Utils::Base64::encode_url($mt);
     }
@@ -305,28 +304,11 @@ sub mkfile2 {
         $url .= "/$k/" . Qiniu::Utils::Base64::encode_url($uservars->{$k});
     } # foreach
 
-    my $buf  = join(",", map { $_->{ctx} } @{$progresses});
+    my $buf  = join(",", map { $_->{ctx} } @{$extra->{progresses}});
     my $body = Qiniu::Utils::ByteReader->new($buf);
-
-    my ($resp, $err) = Qiniu::Utils::HTTP::Client::default_post(
-        $url,
-        $buf,
-        "text/plain",
-        {
-            "Authorization" => "UpToken ${uptoken}",
-        },
-    );
-
-    if (defined($err)) {
-        return undef, 499, $err;
-    }
-
-    my $body2 = join "", @{$resp->{body}};
-    my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($body2);
-    if (defined($err2)) {
-        return undef, 499, $err2;
-    }
-    return $val, $resp->{code}, $resp->{phrase};
+    my ($resp, $err) = $client->post($url, $body, "text/plain");
+    my ($ret, $code, $phrase) = $parse_resp->($resp, $err);
+    return $ret, $code, $phrase;
 } # mkfile2
 
 my $put_one_block = sub {
@@ -350,6 +332,7 @@ my $put_one_block = sub {
             $blk_size,
             $extra,
         );
+        $extra->{up_host} = $prog->{host};
         if ($code >= 400) {
             my $continue = $extra->{notify_err}->($blk_idx, $blk_size, $phrase);
             if (not defined($continue)) {
@@ -447,6 +430,56 @@ sub put_file {
     my $f = Qiniu::Utils::FileReader->new($local_file);
     return put($uptoken, $key, $f, $f->size(), $extra);
 } # put_file
+
+sub put2 {
+    my $uptoken    = shift;
+    my $key        = shift;
+    my $f          = shift;
+    my $fsize      = shift;
+    my $extra      = shift  || {};
+    my $uservars   = shift  || {};
+
+    my $blk_cnt = block_count($fsize);
+    if (not defined($extra->{progresses})) {
+        $extra->{progresses} = [];
+        for (my $i = 0; $i < $blk_cnt; ++$i) {
+            push @{$extra->{progresses}}, {};
+        } # for
+    } elsif (scalar(@{$extra->{progresses}}) != $blk_cnt) {
+        return undef, "invalid put progress";
+    }
+
+    $extra->{chunk_size} ||= $settings->{chunk_size};
+    $extra->{try_times}  ||= $settings->{try_times};
+    $extra->{notify}     ||= $settings->{notify};
+    $extra->{notify_err} ||= $settings->{notify_err};
+
+    my $client = new_client($uptoken);
+    my $code   = undef;
+    my $phrase = undef;
+    if ($settings->{workers} == 1) {
+        ($code, $phrase) =
+            $put_serially->($client, $key, $f, $fsize, $blk_cnt, $extra);
+    } else {
+        ($code, $phrase) =
+            $put_parallel->($client, $key, $f, $fsize, $blk_cnt, $extra);
+    }
+    if ($code >= 400) {
+        return undef, $code, $phrase;
+    }
+
+    return mkfile2($client, $key, $fsize, $extra, $uservars);
+} # put2
+
+sub put2_file {
+    my $uptoken    = shift;
+    my $key        = shift;
+    my $local_file = shift;
+    my $extra      = shift;
+
+    my $f = Qiniu::Utils::FileReader->new($local_file);
+    return put2($uptoken, $key, $f, $f->size(), $extra);
+} # put2_file
 
 1;
 
