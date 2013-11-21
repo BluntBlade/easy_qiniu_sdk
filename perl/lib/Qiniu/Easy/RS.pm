@@ -160,22 +160,34 @@ sub list {
         $ctx = $self->{list_ctx} = {};
     }
 
-    if (not defined($ctx->{bucket}) or $ctx->{bucket} ne $bucket) {
-        $ctx->{bucket} = $bucket;
-        $ctx->{marker} = "";
-    }
-    if (not defined($ctx->{prefix}) or $ctx->{prefix} ne $prefix) {
-        $ctx->{prefix} = $prefix;
-        $ctx->{marker} = "";
+    if (not defined($bucket)) {
+        if (not defined($ctx->{marker}) or $ctx->{marker} eq "") {
+            return undef, "200", "ok";
+        }
+    } else {
+        if (not defined($ctx->{bucket}) or $ctx->{bucket} ne $bucket) {
+            $ctx->{bucket} = $bucket;
+            delete $ctx->{prefix};
+            delete $ctx->{limit};
+            delete $ctx->{marker};
+        }
+        if (not defined($ctx->{prefix}) or $ctx->{prefix} ne $prefix) {
+            $ctx->{prefix} = $prefix;
+            delete $ctx->{limit};
+            delete $ctx->{marker};
+        }
+        if (defined($limit)) {
+            $ctx->{limit} = $limit;
+        }
     }
 
     my $rsf_host = $self->{rsf_host} || Qiniu::Easy::Conf::RSF_HOST;
     my $url = "${rsf_host}/list?bucket=${bucket}";
-    if (defined($prefix) and $prefix ne "") {
-        $url .= "&prefix=${prefix}";
+    if (defined($ctx->{prefix}) and $ctx->{prefix} ne "") {
+        $url .= "&prefix=$ctx->{prefix}";
     }
-    if (defined($limit) and $limit ne "") {
-        $url .= "&limit=${limit}";
+    if (defined($ctx->{limit}) and $ctx->{limit} ne "") {
+        $url .= "&limit=$ctx->{limit}";
     }
     if (defined($ctx->{marker}) and $ctx->{marker} ne "") {
         $url .= "&marker=$ctx->{marker}";
@@ -198,6 +210,9 @@ sub list {
     );
     if (defined($err)) {
         return undef, 499, $err;
+    }
+    if ($resp->{code} >= 400) {
+        return undef, $resp->{code}, $resp->{phrase};
     }
 
     my $body = join "", @{$resp->{body}};
