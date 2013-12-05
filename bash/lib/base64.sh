@@ -1,5 +1,7 @@
 #!/bin/bash
 
+BASE64_PAD="="
+
 function chr {
     printf \\$(($1/64*100 + $1%64/8*10 + $1%8))
 } # chr
@@ -11,12 +13,9 @@ function ord {
 function __base64_encode_impl {
     local map=$1
     local buf=$2
-    local pad=$3
-    shift 3
+    shift 2
 
-    if [[ -z "${pad}" ]]; then
-        pad="="
-    fi
+    local pad="${BASE64_PAD}"
 
     local buf_len=${#buf}
     if [[ "${buf_len}" -eq 0 ]]; then
@@ -82,12 +81,9 @@ __BASE64_FOURTH=4
 function __base64_decode_impl {
     local map=$1
     local buf=$2
-    local pad=$3
-    shift 3
+    shift 2
 
-    if [[ -z "${pad}" ]]; then
-        pad="="
-    fi
+    local pad="${BASE64_PAD}"
 
     buf="${buf%%${pad}*}"
 
