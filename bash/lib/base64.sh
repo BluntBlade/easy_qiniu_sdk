@@ -47,21 +47,16 @@ function __base64_encode_impl {
 
         ### printf "%d %d %d %d\n" $p1 $p2 $p3 $p4
 
-        local c1=${map:$p1:1}
-        local c2=${map:$p2:1}
-        local c3=${map:$p3:1}
-        local c4=${map:$p4:1}
-
         if [[ "${i1}" -eq "${buf_len}" ]]; then
-            ret="${ret}${c1}${c2}"
+            ret="${ret}${map:$p1:1}${map:$p2:1}"
             break
         fi
         if [[ "${i2}" -eq "${buf_len}" ]]; then
-            ret="${ret}${c1}${c2}${c3}"
+            ret="${ret}${map:$p1:1}${map:$p2:1}${map:$p3:1}"
             break
         fi
 
-        ret="${ret}${c1}${c2}${c3}${c4}"
+        ret="${ret}${map:$p1:1}${map:$p2:1}${map:$p3:1}${map:$p4:1}"
     done
 
     echo -n "${ret}"
@@ -72,11 +67,6 @@ function __base64_encode_impl {
     fi
     return 0
 } # __base64_encode_impl
-
-__BASE64_FIRST=1
-__BASE64_SECOND=2
-__BASE64_THIRD=3
-__BASE64_FOURTH=4
 
 function __base64_decode_impl {
     local map=$1
@@ -93,35 +83,58 @@ function __base64_decode_impl {
         return
     fi
 
-    local state="${__BASE64_FIRST}"
     local chr=0
     local ret=""
-    for ((i = 0; i < "${buf_len}"; i += 1)); do
-        local prefix=${map%%${buf:$i:1}*}
-        local val=${#prefix}
-        if [[ "${state}" -eq "${__BASE64_FIRST}" ]]; then
-            chr=$(( (${val} & 0x3F) << 2))
-            state="${__BASE64_SECOND}"
-            continue
+    local i=0
+    local prefix=""
+    local val=""
+    while [[ $i -lt "${buf_len}" ]]; do
+        ### decode first byte
+        prefix="${map%%${buf:$i:1}*}"
+        val="${#prefix}"
+
+        chr=$(( (${val} & 0x3F) << 2 ))
+
+        i=$(( $i + 1 ))
+        if [[ $i -ge "${buf_len}" ]]; then
+            return 1
+            break
         fi
-        if [[ "${state}" -eq "${__BASE64_SECOND}" ]]; then
-            chr=$(( ${chr} | ( (${val} & 0x30) >> 4 ) ))
-            ret="${ret}$(chr "${chr}")"
-            chr=$(( (${val} & 0xF) << 4 ))
-            state="${__BASE64_THIRD}"
-            continue
+
+        ### decode second byte
+        prefix="${map%%${buf:$i:1}*}"
+        val="${#prefix}"
+
+        chr=$(( ${chr} | ( (${val} & 0x30) >> 4 ) ))
+        ret="${ret}$(chr "${chr}")"
+        chr=$(( (${val} & 0xF) << 4 ))
+
+        i=$(( $i + 1 ))
+        if [[ $i -ge "${buf_len}" ]]; then
+            break
         fi
-        if [[ "${state}" -eq "${__BASE64_THIRD}" ]]; then
-            chr=$(( ${chr} | ( (${val} & 0x3C) >> 2 ) ))
-            ret="${ret}$(chr "${chr}")"
-            chr=$(( (${val} & 0x3) << 6 ))
-            state="${__BASE64_FOURTH}"
-            continue
+
+        ### decode third byte
+        prefix="${map%%${buf:$i:1}*}"
+        val="${#prefix}"
+
+        chr=$(( ${chr} | ( (${val} & 0x3C) >> 2 ) ))
+        ret="${ret}$(chr "${chr}")"
+        chr=$(( (${val} & 0x3) << 6 ))
+
+        i=$(( $i + 1 ))
+        if [[ $i -ge "${buf_len}" ]]; then
+            break
         fi
+
+        ### decode fourth byte
+        prefix="${map%%${buf:$i:1}*}"
+        val="${#prefix}"
 
         chr=$(( ${chr} | (${val} & 0x3F) ))
         ret="${ret}$(chr "${chr}")"
-        state="${__BASE64_FIRST}"
+
+        i=$(( $i + 1 ))
     done
 
     echo -n "${ret}"
