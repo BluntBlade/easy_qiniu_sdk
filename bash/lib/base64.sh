@@ -20,11 +20,9 @@ function __base64_encode_calc {
     if [[ -z "${d1}" || "${d1}" -eq 0 ]]; then
         return 0
     fi
-
     if [[ -z "${d2}" ]]; then
         d2=0
     fi
-
     if [[ -z "${d3}" ]]; then
         d3=0
     fi
@@ -58,9 +56,9 @@ function __base64_encode_impl {
     local ret=""
     local buf_len=${#buf}
     if [[ "${buf_len}" -eq 0 ]]; then
-        while true; do
+        while read d1 d2 d3; do
             local output=""
-            output="$(__base64_encode_calc "${map}" $(head -c 3 | od -tu1 -An))"
+            output="$(__base64_encode_calc "${map}" "${d1}" "${d2}" "${d3}")"
             len=$(( ${len} + $? ))
 
             if [[ -z "${output}" ]]; then
@@ -99,6 +97,17 @@ function __base64_encode_impl {
     fi
     return 0
 } # __base64_encode_impl
+
+function __base64_encode_wrapper {
+    if [[ $# -gt 1 ]]; then
+        __base64_encode_impl "$@"
+    else
+        od -tu1 -An                    | \
+        tr -d '\n'                     | \
+        grep -o '\( *[0-9]\+\)\{1,3\}' | \
+        __base64_encode_impl "$@"
+    fi
+} # __base64_encode_wrapper
 
 function __base64_decode_impl {
     local map=$1
@@ -176,7 +185,7 @@ function __base64_decode_impl {
 __BASE64_URLSAFE_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
 function base64_encode_urlsafe {
-    __base64_encode_impl "${__BASE64_URLSAFE_MAP}" "$@"
+    __base64_encode_wrapper "${__BASE64_URLSAFE_MAP}" "$@"
 } # base64_encode_urlsafe
 
 function base64_decode_urlsafe {
@@ -186,16 +195,16 @@ function base64_decode_urlsafe {
 __BASE64_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 function base64_encode {
-    __base64_encode_impl "${__BASE64_MAP}" "$@"
+    __base64_encode_wrapper "${__BASE64_MAP}" "$@"
 } # base64_encode
 
 function base64_decode {
     __base64_decode_impl "${__BASE64_MAP}" "$@"
 } # base64_decode
 
-echo -n "abcd" | base64_encode
-echo
-base64_encode "abcd"
-echo
+###echo -n "abcd" | base64_encode
+###echo
+###base64_encode "abcd"
+###echo
 ###base64_decode "YWJjZA=="
 ###echo
