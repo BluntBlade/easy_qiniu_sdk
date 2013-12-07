@@ -2,13 +2,9 @@
 
 BASE64_PAD="="
 
-function chr {
+function __base64_chr {
     printf \\$(($1/64*100 + $1%64/8*10 + $1%8))
-} # chr
-
-function ord {
-    LC_CTYPE=C printf '%d' "'$1"
-} # ord
+} # __base64_chr
 
 function __base64_encode_calc {
     local map=$1
@@ -103,8 +99,8 @@ function __base64_encode_wrapper {
         __base64_encode_impl "$@"
     else
         od -tu1 -An                    | \
-        tr -d '\n'                     | \
-        grep -o '\( *[0-9]\+\)\{1,3\}' | \
+        tr '\n' ' '                    | \
+        grep -o '\([0-9]\+ *\)\{1,3\}' | \
         __base64_encode_impl "$@"
     fi
 } # __base64_encode_wrapper
@@ -140,7 +136,7 @@ function __base64_decode_calc {
     ord="${#prefix}"
 
     chr=$(( ${chr} | ( (${ord} & 0x30) >> 4 ) ))
-    echo -n "$(chr "${chr}")"
+    echo -n "$(__base64_chr "${chr}")"
     chr=$(( (${ord} & 0xF) << 4 ))
 
     if [[ -z "${c3}" || "${c3}" == "${BASE64_PAD}" ]]; then
@@ -152,7 +148,7 @@ function __base64_decode_calc {
     ord="${#prefix}"
 
     chr=$(( ${chr} | ( (${ord} & 0x3C) >> 2 ) ))
-    echo -n "$(chr "${chr}")"
+    echo -n "$(__base64_chr "${chr}")"
     chr=$(( (${ord} & 0x3) << 6 ))
 
     if [[ -z "${c4}" || "${c4}" == "${BASE64_PAD}" ]]; then
@@ -164,7 +160,7 @@ function __base64_decode_calc {
     ord="${#prefix}"
 
     chr=$(( ${chr} | (${ord} & 0x3F) ))
-    echo -n "$(chr "${chr}")"
+    echo -n "$(__base64_chr "${chr}")"
     return 0
 } # __base64_decode_calc
 
@@ -175,27 +171,45 @@ function __base64_decode_impl {
 
     local buf_len=${#buf}
     if [[ "${buf_len}" -eq 0 ]]; then
-        echo -n ""
-        return
+        while read d1 d2 d3 d4; do
+            local output=""
+            output="$(__base64_decode_calc "${map}" "${d1}" "${d2}" "${d3}" "${d4}")"
+            if [[ -z "${output}" ]]; then
+                break
+            fi
+
+            echo -n "${output}"
+        done
+    else
+        local i=0
+        while true; do
+            local i1=$(( $i + 1 ))
+            local i2=$(( $i + 2 ))
+            local i3=$(( $i + 3 ))
+            local output=""
+            output="$(__base64_decode_calc "${map}" "${buf:$i:1}" "${buf:$i1:1}" "${buf:$i2:1}" "${buf:$i3:1}")"
+            if [[ -z "${output}" ]]; then
+                break
+            fi
+
+            echo -n "${output}"
+            i=$(( $i + 4 ))
+        done
     fi
-
-    local i=0
-    while true; do
-        local i1=$(( $i + 1 ))
-        local i2=$(( $i + 2 ))
-        local i3=$(( $i + 3 ))
-        local output=""
-        output="$(__base64_decode_calc "${map}" "${buf:$i:1}" "${buf:$i1:1}" "${buf:$i2:1}" "${buf:$i3:1}")"
-        if [[ -z "${output}" ]]; then
-            break
-        fi
-
-        echo -n "${output}"
-        i=$(( $i + 4 ))
-    done
 
     return 0
 }; # decode_impl
+
+function __base64_decode_wrapper {
+    if [[ $# -gt 1 ]]; then
+        __base64_decode_impl "$@"
+    else
+        grep -o '[^ ]'                 | \
+        tr '\n' ' '                    | \
+        grep -o '\([^ ]\+ *\)\{1,4\}'  | \
+        __base64_decode_impl "$@"
+    fi
+} # __base64_decode_wrapper
 
 __BASE64_URLSAFE_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
@@ -204,7 +218,7 @@ function base64_encode_urlsafe {
 } # base64_encode_urlsafe
 
 function base64_decode_urlsafe {
-    __base64_decode_impl "${__BASE64_URLSAFE_MAP}" "$@"
+    __base64_decode_wrapper "${__BASE64_URLSAFE_MAP}" "$@"
 } # base64_decode_urlsafe
 
 __BASE64_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -214,12 +228,14 @@ function base64_encode {
 } # base64_encode
 
 function base64_decode {
-    __base64_decode_impl "${__BASE64_MAP}" "$@"
+    __base64_decode_wrapper "${__BASE64_MAP}" "$@"
 } # base64_decode
 
-###echo -n "abcd" | base64_encode
-###echo
-###base64_encode "abcd"
-###echo
-###base64_decode "YWJjZA=="
-###echo
+echo -n "abcd" | base64_encode
+echo
+base64_encode "abcd"
+echo
+echo -n "YWJjZA" | base64_decode
+echo
+base64_decode "YWJjZA=="
+echo
