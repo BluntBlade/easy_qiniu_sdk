@@ -109,14 +109,69 @@ function __base64_encode_wrapper {
     fi
 } # __base64_encode_wrapper
 
+function __base64_decode_calc {
+    local map=$1
+    local c1=$2
+    local c2=$3
+    local c3=$4
+    local c4=$5
+    shift 5
+
+    local prefix=""
+    local chr=0
+    local ord=0
+
+    if [[ -z "${c1}" || "${c1}" == "${BASE64_PAD}" ]]; then
+        return 0
+    fi
+
+    ### decode first byte
+    prefix="${map%%${c1}*}"
+    ord="${#prefix}"
+
+    chr=$(( (${ord} & 0x3F) << 2 ))
+
+    if [[ -z "${c2}" || "${c2}" == "${BASE64_PAD}" ]]; then
+        return 0
+    fi
+
+    ### decode second byte
+    prefix="${map%%${c2}*}"
+    ord="${#prefix}"
+
+    chr=$(( ${chr} | ( (${ord} & 0x30) >> 4 ) ))
+    echo -n "$(chr "${chr}")"
+    chr=$(( (${ord} & 0xF) << 4 ))
+
+    if [[ -z "${c3}" || "${c3}" == "${BASE64_PAD}" ]]; then
+        return 0
+    fi
+
+    ### decode third byte
+    prefix="${map%%${c3}*}"
+    ord="${#prefix}"
+
+    chr=$(( ${chr} | ( (${ord} & 0x3C) >> 2 ) ))
+    echo -n "$(chr "${chr}")"
+    chr=$(( (${ord} & 0x3) << 6 ))
+
+    if [[ -z "${c4}" || "${c4}" == "${BASE64_PAD}" ]]; then
+        return 0
+    fi
+
+    ### decode fourth byte
+    prefix="${map%%${c4}*}"
+    ord="${#prefix}"
+
+    chr=$(( ${chr} | (${ord} & 0x3F) ))
+    echo -n "$(chr "${chr}")"
+    return 0
+} # __base64_decode_calc
+
 function __base64_decode_impl {
     local map=$1
     local buf=$2
     shift 2
-
-    local pad="${BASE64_PAD}"
-
-    buf="${buf%%${pad}*}"
 
     local buf_len=${#buf}
     if [[ "${buf_len}" -eq 0 ]]; then
@@ -124,61 +179,21 @@ function __base64_decode_impl {
         return
     fi
 
-    local chr=0
-    local ret=""
     local i=0
-    local prefix=""
-    local val=""
-    while [[ $i -lt "${buf_len}" ]]; do
-        ### decode first byte
-        prefix="${map%%${buf:$i:1}*}"
-        val="${#prefix}"
-
-        chr=$(( (${val} & 0x3F) << 2 ))
-
-        i=$(( $i + 1 ))
-        if [[ $i -ge "${buf_len}" ]]; then
-            return 1
+    while true; do
+        local i1=$(( $i + 1 ))
+        local i2=$(( $i + 2 ))
+        local i3=$(( $i + 3 ))
+        local output=""
+        output="$(__base64_decode_calc "${map}" "${buf:$i:1}" "${buf:$i1:1}" "${buf:$i2:1}" "${buf:$i3:1}")"
+        if [[ -z "${output}" ]]; then
             break
         fi
 
-        ### decode second byte
-        prefix="${map%%${buf:$i:1}*}"
-        val="${#prefix}"
-
-        chr=$(( ${chr} | ( (${val} & 0x30) >> 4 ) ))
-        ret="${ret}$(chr "${chr}")"
-        chr=$(( (${val} & 0xF) << 4 ))
-
-        i=$(( $i + 1 ))
-        if [[ $i -ge "${buf_len}" ]]; then
-            break
-        fi
-
-        ### decode third byte
-        prefix="${map%%${buf:$i:1}*}"
-        val="${#prefix}"
-
-        chr=$(( ${chr} | ( (${val} & 0x3C) >> 2 ) ))
-        ret="${ret}$(chr "${chr}")"
-        chr=$(( (${val} & 0x3) << 6 ))
-
-        i=$(( $i + 1 ))
-        if [[ $i -ge "${buf_len}" ]]; then
-            break
-        fi
-
-        ### decode fourth byte
-        prefix="${map%%${buf:$i:1}*}"
-        val="${#prefix}"
-
-        chr=$(( ${chr} | (${val} & 0x3F) ))
-        ret="${ret}$(chr "${chr}")"
-
-        i=$(( $i + 1 ))
+        echo -n "${output}"
+        i=$(( $i + 4 ))
     done
 
-    echo -n "${ret}"
     return 0
 }; # decode_impl
 
