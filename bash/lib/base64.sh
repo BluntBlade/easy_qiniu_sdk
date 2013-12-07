@@ -17,7 +17,7 @@ function __base64_encode_calc {
     local d3=$4
     shift 4
 
-    if [[ -z "${d1}" ]]; then
+    if [[ -z "${d1}" || "${d1}" -eq 0 ]]; then
         return 0
     fi
 
@@ -49,96 +49,53 @@ function __base64_encode_calc {
     return 3
 } # __base64_encode_calc
 
-function __base64_encode_impl_from_stdin {
-    local map=$1
-    shift 1
-
-    local len=0
-    local ret=""
-    while true; do
-        local output=""
-        output="$(__base64_encode_calc "${map}" $(head -c 3 | od -tu1 -An))"
-        len=$(( ${len} + $? ))
-
-        if [[ -z "${output}" ]]; then
-            break
-        fi
-        ret="${ret}${output}"
-    done
-
-    local pad="${BASE64_PAD}"
-
-    local remainder=$(( ${len} % 3 ))
-    local padding_len=0
-    if [[ "${remainder}" -eq 0 ]]; then
-        padding_len=0
-    else
-        padding_len=$(( 3 - ${remainder} ))
-    fi
-
-    echo -n "${ret}"
-    if [[ "${padding_len}" -eq 1 ]]; then
-        echo -n "${pad}"
-    elif [[ "${padding_len}" -eq 2 ]]; then
-        echo -n "${pad}${pad}"
-    fi
-    return 0
-} # __base64_encode_impl_from_stdin
-
 function __base64_encode_impl {
     local map=$1
     local buf=$2
     shift 2
 
+    local len=0
+    local ret=""
     local buf_len=${#buf}
     if [[ "${buf_len}" -eq 0 ]]; then
-        __base64_encode_impl_from_stdin "${map}"
-        return 0
-    fi
+        while true; do
+            local output=""
+            output="$(__base64_encode_calc "${map}" $(head -c 3 | od -tu1 -An))"
+            len=$(( ${len} + $? ))
 
-    local remainder=$(( ${buf_len} % 3 ))
-    local padding_len=0
-    if [[ "${remainder}" -eq 0 ]]; then
-        padding_len=0
+            if [[ -z "${output}" ]]; then
+                break
+            fi
+            ret="${ret}${output}"
+        done
     else
-        padding_len=$(( 3 - ${remainder} ))
+        local i=0
+        while true; do
+            local i1=$(( $i + 1 ))
+            local i2=$(( $i + 2 ))
+            local input="$(LC_CTYPE=C printf "%d %d %d" \'${buf:$i:1} \'${buf:${i1}:1} \'${buf:${i2}:1})"
+            local output=""
+            output="$(__base64_encode_calc "${map}" ${input})"
+            len=$(( ${len} + $? ))
+
+            i=$(( $i + 3 ))
+
+            if [[ -z "${output}" ]]; then
+                break
+            fi
+            ret="${ret}${output}"
+        done
     fi
-
-    local ret=""
-    local len=$(( ${buf_len} + ${padding_len} ))
-    for ((i = 0; i < "${len}"; i += 3)); do
-        local i1=$(( $i + 1 ))
-        local i2=$(( $i + 2 ))
-        eval "d=($(LC_CTYPE=C printf "\- %d %d %d" \'${buf:$i:1} \'${buf:${i1}:1} \'${buf:${i2}:1}))"
-
-        ### echo ${d[1]} ${d[2]} ${d[3]}
- 
-        local p1=$(( (${d[1]} >> 2) & 0x3F ))
-        local p2=$(( ( (${d[1]} & 0x3) << 4 ) | ( (${d[2]} & 0xF0) >> 4 ) ))
-        local p3=$(( ( (${d[2]} & 0xF) << 2 ) | ( (${d[3]} & 0xC0) >> 6 ) ))
-        local p4=$(( ${d[3]} & 0x3F ))
-
-        ### printf "%d %d %d %d\n" $p1 $p2 $p3 $p4
-
-        if [[ "${i1}" -eq "${buf_len}" ]]; then
-            ret="${ret}${map:$p1:1}${map:$p2:1}"
-            break
-        fi
-        if [[ "${i2}" -eq "${buf_len}" ]]; then
-            ret="${ret}${map:$p1:1}${map:$p2:1}${map:$p3:1}"
-            break
-        fi
-
-        ret="${ret}${map:$p1:1}${map:$p2:1}${map:$p3:1}${map:$p4:1}"
-    done
-
-    local pad="${BASE64_PAD}"
 
     echo -n "${ret}"
-    if [[ "${padding_len}" -eq 1 ]]; then
-        echo -n "${pad}"
-    elif [[ "${padding_len}" -eq 2 ]]; then
-        echo -n "${pad}${pad}"
+
+    if [[ -n "${BASE64_PAD}" ]]; then
+        local padding_len=$(( 3 - (${len} % 3) ))
+        if [[ "${padding_len}" -eq 1 ]]; then
+            echo -n "${BASE64_PAD}"
+        elif [[ "${padding_len}" -eq 2 ]]; then
+            echo -n "${BASE64_PAD}${BASE64_PAD}"
+        fi
     fi
     return 0
 } # __base64_encode_impl
@@ -236,9 +193,9 @@ function base64_decode {
     __base64_decode_impl "${__BASE64_MAP}" "$@"
 } # base64_decode
 
-###echo -n "abcd" | base64_encode
-###echo
-###base64_encode "abcd"
-###echo
+echo -n "abcd" | base64_encode
+echo
+base64_encode "abcd"
+echo
 ###base64_decode "YWJjZA=="
 ###echo
