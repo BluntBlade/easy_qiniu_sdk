@@ -10,16 +10,89 @@ function ord {
     LC_CTYPE=C printf '%d' "'$1"
 } # ord
 
+function __base64_encode_calc {
+    local map=$1
+    local d1=$2
+    local d2=$3
+    local d3=$4
+    shift 4
+
+    if [[ -z "${d1}" ]]; then
+        return 0
+    fi
+
+    if [[ -z "${d2}" ]]; then
+        d2=0
+    fi
+
+    if [[ -z "${d3}" ]]; then
+        d3=0
+    fi
+
+    local p1=$(( (${d1} >> 2) & 0x3F ))
+    local p2=$(( ( (${d1} & 0x3) << 4 ) | ( (${d2} & 0xF0) >> 4 ) ))
+    local p3=$(( ( (${d2} & 0xF) << 2 ) | ( (${d3} & 0xC0) >> 6 ) ))
+    local p4=$(( ${d3} & 0x3F ))
+
+    ### printf "%d %d %d %d\n" $p1 $p2 $p3 $p4
+
+    if [[ "${d2}" -eq 0 ]]; then
+        echo -n "${map:$p1:1}${map:$p2:1}"
+        return 1
+    fi
+    if [[ "${d3}" -eq 0 ]]; then
+        echo -n "${map:$p1:1}${map:$p2:1}${map:$p3:1}"
+        return 2
+    fi
+
+    echo -n "${map:$p1:1}${map:$p2:1}${map:$p3:1}${map:$p4:1}"
+    return 3
+} # __base64_encode_calc
+
+function __base64_encode_impl_from_stdin {
+    local map=$1
+    shift 1
+
+    local len=0
+    local ret=""
+    while true; do
+        local output=""
+        output="$(__base64_encode_calc "${map}" $(head -c 3 | od -tu1 -An))"
+        len=$(( ${len} + $? ))
+
+        if [[ -z "${output}" ]]; then
+            break
+        fi
+        ret="${ret}${output}"
+    done
+
+    local pad="${BASE64_PAD}"
+
+    local remainder=$(( ${len} % 3 ))
+    local padding_len=0
+    if [[ "${remainder}" -eq 0 ]]; then
+        padding_len=0
+    else
+        padding_len=$(( 3 - ${remainder} ))
+    fi
+
+    echo -n "${ret}"
+    if [[ "${padding_len}" -eq 1 ]]; then
+        echo -n "${pad}"
+    elif [[ "${padding_len}" -eq 2 ]]; then
+        echo -n "${pad}${pad}"
+    fi
+    return 0
+} # __base64_encode_impl_from_stdin
+
 function __base64_encode_impl {
     local map=$1
     local buf=$2
     shift 2
 
-    local pad="${BASE64_PAD}"
-
     local buf_len=${#buf}
     if [[ "${buf_len}" -eq 0 ]]; then
-        echo -n ""
+        __base64_encode_impl_from_stdin "${map}"
         return 0
     fi
 
@@ -58,6 +131,8 @@ function __base64_encode_impl {
 
         ret="${ret}${map:$p1:1}${map:$p2:1}${map:$p3:1}${map:$p4:1}"
     done
+
+    local pad="${BASE64_PAD}"
 
     echo -n "${ret}"
     if [[ "${padding_len}" -eq 1 ]]; then
@@ -161,6 +236,8 @@ function base64_decode {
     __base64_decode_impl "${__BASE64_MAP}" "$@"
 } # base64_decode
 
+###echo -n "abcd" | base64_encode
+###echo
 ###base64_encode "abcd"
 ###echo
 ###base64_decode "YWJjZA=="
