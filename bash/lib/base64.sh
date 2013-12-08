@@ -1,12 +1,27 @@
 #!/bin/bash
 
-BASE64_PAD="="
+##############################################################################
+#
+# Easy Qiniu Bash SDK
+#
+# Module: base64.sh
+#
+# Author: LIANG Tao
+# Weibo:  @无锋之刃
+# Email:  liangtao@qiniu.com
+#         amethyst.black@gmail.com
+#
+# Wiki:   http://en.wikipedia.org/wiki/Base64
+#
+##############################################################################
 
-function __base64_chr {
+QNC_BASE64_PAD="="
+
+function __qnc_base64_chr {
     printf \\$(($1/64*100 + $1%64/8*10 + $1%8))
-} # __base64_chr
+} # __qnc_base64_chr
 
-function __base64_encode_calc {
+function __qnc_base64_encode_calc {
     local map=$1
     local d1=$2
     local d2=$3
@@ -41,9 +56,9 @@ function __base64_encode_calc {
 
     echo -n "${map:$p1:1}${map:$p2:1}${map:$p3:1}${map:$p4:1}"
     return 3
-} # __base64_encode_calc
+} # __qnc_base64_encode_calc
 
-function __base64_encode_impl {
+function __qnc_base64_encode_impl {
     local map=$1
     local buf=$2
     shift 2
@@ -54,7 +69,7 @@ function __base64_encode_impl {
     if [[ "${buf_len}" -eq 0 ]]; then
         while read d1 d2 d3; do
             local output=""
-            output="$(__base64_encode_calc "${map}" "${d1}" "${d2}" "${d3}")"
+            output="$(__qnc_base64_encode_calc "${map}" "${d1}" "${d2}" "${d3}")"
             len=$(( ${len} + $? ))
 
             if [[ -z "${output}" ]]; then
@@ -69,7 +84,7 @@ function __base64_encode_impl {
             local i2=$(( $i + 2 ))
             local input="$(LC_CTYPE=C printf "%d %d %d" \'${buf:$i:1} \'${buf:${i1}:1} \'${buf:${i2}:1})"
             local output=""
-            output="$(__base64_encode_calc "${map}" ${input})"
+            output="$(__qnc_base64_encode_calc "${map}" ${input})"
             len=$(( ${len} + $? ))
 
             i=$(( $i + 3 ))
@@ -83,29 +98,29 @@ function __base64_encode_impl {
 
     echo -n "${ret}"
 
-    if [[ -n "${BASE64_PAD}" ]]; then
+    if [[ -n "${QNC_BASE64_PAD}" ]]; then
         local padding_len=$(( 3 - (${len} % 3) ))
         if [[ "${padding_len}" -eq 1 ]]; then
-            echo -n "${BASE64_PAD}"
+            echo -n "${QNC_BASE64_PAD}"
         elif [[ "${padding_len}" -eq 2 ]]; then
-            echo -n "${BASE64_PAD}${BASE64_PAD}"
+            echo -n "${QNC_BASE64_PAD}${QNC_BASE64_PAD}"
         fi
     fi
     return 0
-} # __base64_encode_impl
+} # __qnc_base64_encode_impl
 
-function __base64_encode_wrapper {
+function __qnc_base64_encode_wrapper {
     if [[ $# -gt 1 ]]; then
-        __base64_encode_impl "$@"
+        __qnc_base64_encode_impl "$@"
     else
-        od -tu1 -An                    | \
+        od -v -tu1 -An                 | \
         tr '\n' ' '                    | \
         grep -o '\([0-9]\+ *\)\{1,3\}' | \
-        __base64_encode_impl "$@"
+        __qnc_base64_encode_impl "$@"
     fi
-} # __base64_encode_wrapper
+} # __qnc_base64_encode_wrapper
 
-function __base64_decode_calc {
+function __qnc_base64_decode_calc {
     local map=$1
     local c1=$2
     local c2=$3
@@ -117,7 +132,7 @@ function __base64_decode_calc {
     local chr=0
     local ord=0
 
-    if [[ -z "${c1}" || "${c1}" == "${BASE64_PAD}" ]]; then
+    if [[ -z "${c1}" || "${c1}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -127,7 +142,7 @@ function __base64_decode_calc {
 
     chr=$(( (${ord} & 0x3F) << 2 ))
 
-    if [[ -z "${c2}" || "${c2}" == "${BASE64_PAD}" ]]; then
+    if [[ -z "${c2}" || "${c2}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -136,10 +151,10 @@ function __base64_decode_calc {
     ord="${#prefix}"
 
     chr=$(( ${chr} | ( (${ord} & 0x30) >> 4 ) ))
-    echo -n "$(__base64_chr "${chr}")"
+    echo -n "$(__qnc_base64_chr "${chr}")"
     chr=$(( (${ord} & 0xF) << 4 ))
 
-    if [[ -z "${c3}" || "${c3}" == "${BASE64_PAD}" ]]; then
+    if [[ -z "${c3}" || "${c3}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -148,10 +163,10 @@ function __base64_decode_calc {
     ord="${#prefix}"
 
     chr=$(( ${chr} | ( (${ord} & 0x3C) >> 2 ) ))
-    echo -n "$(__base64_chr "${chr}")"
+    echo -n "$(__qnc_base64_chr "${chr}")"
     chr=$(( (${ord} & 0x3) << 6 ))
 
-    if [[ -z "${c4}" || "${c4}" == "${BASE64_PAD}" ]]; then
+    if [[ -z "${c4}" || "${c4}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -160,11 +175,11 @@ function __base64_decode_calc {
     ord="${#prefix}"
 
     chr=$(( ${chr} | (${ord} & 0x3F) ))
-    echo -n "$(__base64_chr "${chr}")"
+    echo -n "$(__qnc_base64_chr "${chr}")"
     return 0
-} # __base64_decode_calc
+} # __qnc_base64_decode_calc
 
-function __base64_decode_impl {
+function __qnc_base64_decode_impl {
     local map=$1
     local buf=$2
     shift 2
@@ -173,7 +188,7 @@ function __base64_decode_impl {
     if [[ "${buf_len}" -eq 0 ]]; then
         while read d1 d2 d3 d4; do
             local output=""
-            output="$(__base64_decode_calc "${map}" "${d1}" "${d2}" "${d3}" "${d4}")"
+            output="$(__qnc_base64_decode_calc "${map}" "${d1}" "${d2}" "${d3}" "${d4}")"
             if [[ -z "${output}" ]]; then
                 break
             fi
@@ -187,7 +202,7 @@ function __base64_decode_impl {
             local i2=$(( $i + 2 ))
             local i3=$(( $i + 3 ))
             local output=""
-            output="$(__base64_decode_calc "${map}" "${buf:$i:1}" "${buf:$i1:1}" "${buf:$i2:1}" "${buf:$i3:1}")"
+            output="$(__qnc_base64_decode_calc "${map}" "${buf:$i:1}" "${buf:$i1:1}" "${buf:$i2:1}" "${buf:$i3:1}")"
             if [[ -z "${output}" ]]; then
                 break
             fi
@@ -200,42 +215,42 @@ function __base64_decode_impl {
     return 0
 }; # decode_impl
 
-function __base64_decode_wrapper {
+function __qnc_base64_decode_wrapper {
     if [[ $# -gt 1 ]]; then
-        __base64_decode_impl "$@"
+        __qnc_base64_decode_impl "$@"
     else
         grep -o '[^ ]'                 | \
         tr '\n' ' '                    | \
         grep -o '\([^ ]\+ *\)\{1,4\}'  | \
-        __base64_decode_impl "$@"
+        __qnc_base64_decode_impl "$@"
     fi
-} # __base64_decode_wrapper
+} # __qnc_base64_decode_wrapper
 
-__BASE64_URLSAFE_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+__QNC_BASE64_URLSAFE_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
 function base64_encode_urlsafe {
-    __base64_encode_wrapper "${__BASE64_URLSAFE_MAP}" "$@"
+    __qnc_base64_encode_wrapper "${__QNC_BASE64_URLSAFE_MAP}" "$@"
 } # base64_encode_urlsafe
 
 function base64_decode_urlsafe {
-    __base64_decode_wrapper "${__BASE64_URLSAFE_MAP}" "$@"
+    __qnc_base64_decode_wrapper "${__QNC_BASE64_URLSAFE_MAP}" "$@"
 } # base64_decode_urlsafe
 
-__BASE64_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+__QNC_BASE64_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 function base64_encode {
-    __base64_encode_wrapper "${__BASE64_MAP}" "$@"
+    __qnc_base64_encode_wrapper "${__QNC_BASE64_MAP}" "$@"
 } # base64_encode
 
 function base64_decode {
-    __base64_decode_wrapper "${__BASE64_MAP}" "$@"
+    __qnc_base64_decode_wrapper "${__QNC_BASE64_MAP}" "$@"
 } # base64_decode
 
-echo -n "abcd" | base64_encode
-echo
-base64_encode "abcd"
-echo
-echo -n "YWJjZA" | base64_decode
-echo
-base64_decode "YWJjZA=="
-echo
+###echo -n "abcd" | base64_encode
+###echo
+###base64_encode "abcd"
+###echo
+###echo -n "YWJjZA==" | base64_decode
+###echo
+###base64_decode "YWJjZA=="
+###echo
