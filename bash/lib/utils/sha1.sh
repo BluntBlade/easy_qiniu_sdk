@@ -209,13 +209,15 @@ function __qnc_sha1_calc_msg {
 } # __qnc_sha1_calc_msg
 
 function __qnc_sha1_calc_msg_wrapper {
+    local arg_cnt=$#
+
     local end=$1
     local ctx=$2
     local msg=$3
     shift 3
 
     local cmd=""
-    if [[ "${#msg}" -eq 0 ]]; then
+    if [[ "${arg_cnt}" -eq 2 ]]; then
         cmd="cat"
     else
         cmd="echo -n \"${msg}\""
@@ -239,6 +241,12 @@ function qnc_sha1_write {
 function qnc_sha1_sum {
     __qnc_sha1_calc_msg_wrapper "END" "$@"
 } # qnc_sha1_sum
+
+function qnc_sha1 {
+    local ctx=""
+    ctx=$(qnc_sha1_new)
+    qnc_sha1_sum "${ctx}" "$@"
+} # qnc_sha1
 
 ###printf "%08x\n" $(__qnc_sha1_left_rotate "0x99990000" 16)
 ###printf "%08x\n" $(__qnc_sha1_mod_add "0xFFFF0000" "0x00012345")
