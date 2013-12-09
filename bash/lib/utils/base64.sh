@@ -59,6 +59,8 @@ function __qnc_base64_encode_calc {
 } # __qnc_base64_encode_calc
 
 function __qnc_base64_encode_impl {
+    local args_cnt=$#
+
     local map=$1
     local buf=$2
     shift 2
@@ -66,7 +68,7 @@ function __qnc_base64_encode_impl {
     local len=0
     local ret=""
     local buf_len=${#buf}
-    if [[ "${buf_len}" -eq 0 ]]; then
+    if [[ "${args_cnt}" -eq 0 ]]; then
         while read d1 d2 d3; do
             local output=""
             output="$(__qnc_base64_encode_calc "${map}" "${d1}" "${d2}" "${d3}")"
@@ -78,6 +80,11 @@ function __qnc_base64_encode_impl {
             ret="${ret}${output}"
         done
     else
+        if [[ "${#buf}" -eq 0 ]]; then
+            echo -n ""
+            return
+        fi
+
         local i=0
         while true; do
             local i1=$(( $i + 1 ))
@@ -246,6 +253,7 @@ function qnc_base64_decode {
     __qnc_base64_decode_wrapper "${__QNC_BASE64_MAP}" "$@"
 } # qnc_base64_decode
 
+qnc_base64_encode
 ###echo -n "abcd" | qnc_base64_encode
 ###echo
 ###qnc_base64_encode "abcd"
