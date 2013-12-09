@@ -182,7 +182,7 @@ function __qnc_sha1_calc_msg {
     ### when reach here, remainder is holding the remainder of the message, with one trailling space
     if [[ "${#end}" -eq 0 ]]; then
         ### not a sum invocation
-        printf "%s%08x %08x %s" "${hash}" "${bit_len}" "${remainder}"
+        printf "%s%s%s" "${hash}" "${bit_len}" "${remainder}"
         return
     fi
 
@@ -241,6 +241,10 @@ function qnc_sha1_write {
 function qnc_sha1_sum {
     __qnc_sha1_calc_msg_wrapper "END" "$@"
 } # qnc_sha1_sum
+
+function qnc_sha1_chunk_size {
+    echo -n "${__QNC_SHA1_CHUNK_SIZE}"
+} # qnc_sha1_chunk_size
 
 function qnc_sha1 {
     local ctx=""
