@@ -228,29 +228,29 @@ function __qnc_base64_decode_wrapper {
 
 __QNC_BASE64_URLSAFE_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
-function base64_encode_urlsafe {
+function qnc_base64_encode_urlsafe {
     __qnc_base64_encode_wrapper "${__QNC_BASE64_URLSAFE_MAP}" "$@"
-} # base64_encode_urlsafe
+} # qnc_base64_encode_urlsafe
 
-function base64_decode_urlsafe {
+function qnc_base64_decode_urlsafe {
     __qnc_base64_decode_wrapper "${__QNC_BASE64_URLSAFE_MAP}" "$@"
-} # base64_decode_urlsafe
+} # qnc_base64_decode_urlsafe
 
 __QNC_BASE64_MAP="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
-function base64_encode {
+function qnc_base64_encode {
     __qnc_base64_encode_wrapper "${__QNC_BASE64_MAP}" "$@"
-} # base64_encode
+} # qnc_base64_encode
 
-function base64_decode {
+function qnc_base64_decode {
     __qnc_base64_decode_wrapper "${__QNC_BASE64_MAP}" "$@"
-} # base64_decode
+} # qnc_base64_decode
 
-###echo -n "abcd" | base64_encode
+###echo -n "abcd" | qnc_base64_encode
 ###echo
-###base64_encode "abcd"
+###qnc_base64_encode "abcd"
 ###echo
-###echo -n "YWJjZA==" | base64_decode
+###echo -n "YWJjZA==" | qnc_base64_decode
 ###echo
-###base64_decode "YWJjZA=="
+###qnc_base64_decode "YWJjZA=="
 ###echo
