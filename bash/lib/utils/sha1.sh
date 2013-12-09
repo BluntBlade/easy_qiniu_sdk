@@ -180,7 +180,7 @@ function __qnc_sha1_calc_msg {
     done
 
     ### when reach here, remainder is holding the remainder of the message, with one trailling space
-    if [[ -z "${end}" ]]; then
+    if [[ "${#end}" -eq 0 ]]; then
         ### not a sum invocation
         printf "%s%08x %08x %s" "${hash}" "${bit_len}" "${remainder}"
         return

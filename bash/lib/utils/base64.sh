@@ -28,13 +28,13 @@ function __qnc_base64_encode_calc {
     local d3=$4
     shift 4
 
-    if [[ -z "${d1}" || "${d1}" -eq 0 ]]; then
+    if [[ "${#d1}" -eq 0 || "${d1}" -eq 0 ]]; then
         return 0
     fi
-    if [[ -z "${d2}" ]]; then
+    if [[ "${#d2}" -eq 0 ]]; then
         d2=0
     fi
-    if [[ -z "${d3}" ]]; then
+    if [[ "${#d3}" -eq 0 ]]; then
         d3=0
     fi
 
@@ -74,7 +74,7 @@ function __qnc_base64_encode_impl {
             output="$(__qnc_base64_encode_calc "${map}" "${d1}" "${d2}" "${d3}")"
             len=$(( ${len} + $? ))
 
-            if [[ -z "${output}" ]]; then
+            if [[ "${#output}" -eq 0 ]]; then
                 break
             fi
             ret="${ret}${output}"
@@ -96,7 +96,7 @@ function __qnc_base64_encode_impl {
 
             i=$(( $i + 3 ))
 
-            if [[ -z "${output}" ]]; then
+            if [[ "${#output}" -eq 0 ]]; then
                 break
             fi
             ret="${ret}${output}"
@@ -139,7 +139,7 @@ function __qnc_base64_decode_calc {
     local chr=0
     local ord=0
 
-    if [[ -z "${c1}" || "${c1}" == "${QNC_BASE64_PAD}" ]]; then
+    if [[ "${#c1}" -eq 0 || "${c1}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -149,7 +149,7 @@ function __qnc_base64_decode_calc {
 
     chr=$(( (${ord} & 0x3F) << 2 ))
 
-    if [[ -z "${c2}" || "${c2}" == "${QNC_BASE64_PAD}" ]]; then
+    if [[ "${#c2}" -eq 0 || "${c2}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -161,7 +161,7 @@ function __qnc_base64_decode_calc {
     echo -n "$(__qnc_base64_chr "${chr}")"
     chr=$(( (${ord} & 0xF) << 4 ))
 
-    if [[ -z "${c3}" || "${c3}" == "${QNC_BASE64_PAD}" ]]; then
+    if [[ "${#c3}" -eq 0 || "${c3}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -173,7 +173,7 @@ function __qnc_base64_decode_calc {
     echo -n "$(__qnc_base64_chr "${chr}")"
     chr=$(( (${ord} & 0x3) << 6 ))
 
-    if [[ -z "${c4}" || "${c4}" == "${QNC_BASE64_PAD}" ]]; then
+    if [[ "${#c4}" -eq 0 || "${c4}" == "${QNC_BASE64_PAD}" ]]; then
         return 0
     fi
 
@@ -196,7 +196,7 @@ function __qnc_base64_decode_impl {
         while read d1 d2 d3 d4; do
             local output=""
             output="$(__qnc_base64_decode_calc "${map}" "${d1}" "${d2}" "${d3}" "${d4}")"
-            if [[ -z "${output}" ]]; then
+            if [[ "${#output}" -eq 0 ]]; then
                 break
             fi
 
@@ -210,7 +210,7 @@ function __qnc_base64_decode_impl {
             local i3=$(( $i + 3 ))
             local output=""
             output="$(__qnc_base64_decode_calc "${map}" "${buf:$i:1}" "${buf:$i1:1}" "${buf:$i2:1}" "${buf:$i3:1}")"
-            if [[ -z "${output}" ]]; then
+            if [[ "${#output}" -eq 0 ]]; then
                 break
             fi
 
@@ -253,7 +253,6 @@ function qnc_base64_decode {
     __qnc_base64_decode_wrapper "${__QNC_BASE64_MAP}" "$@"
 } # qnc_base64_decode
 
-qnc_base64_encode
 ###echo -n "abcd" | qnc_base64_encode
 ###echo
 ###qnc_base64_encode "abcd"
