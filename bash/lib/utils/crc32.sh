@@ -29,37 +29,15 @@ function __qnc_crc32_calc {
     shift 2
 
     local crc=$(( ${ctx%% *} ^ 0xFFFFFFFF ))
-    while read b1 b2 b3 b4; do
-        local idx=0
-        local i=0
-
-        idx=$(( (${crc} ^ 0x${b1}) & 0xFF ))
-        i=$(( $idx * 11 ))
-        crc=$(( ${__QNC_CRC32_TABLE:$i:10} ^ (${crc} >> 8) ))
-
-        if [[ "${#b2}" -eq 0 ]]; then
-            break
-        fi
-
-        idx=$(( (${crc} ^ 0x${b2}) & 0xFF ))
-        i=$(( $idx * 11 ))
-        crc=$(( ${__QNC_CRC32_TABLE:$i:10} ^ (${crc} >> 8) ))
-
-        if [[ "${#b3}" -eq 0 ]]; then
-            break
-        fi
-
-        idx=$(( (${crc} ^ 0x${b3}) & 0xFF ))
-        i=$(( $idx * 11 ))
-        crc=$(( ${__QNC_CRC32_TABLE:$i:10} ^ (${crc} >> 8) ))
-
-        if [[ "${#b4}" -eq 0 ]]; then
-            break
-        fi
-
-        idx=$(( (${crc} ^ 0x${b4}) & 0xFF ))
-        i=$(( $idx * 11 ))
-        crc=$(( ${__QNC_CRC32_TABLE:$i:10} ^ (${crc} >> 8) ))
+    local idx=0
+    local n=0
+    while read hex; do
+        local hexs=(${hex})
+        for (( i = 0; i < ${#hexs[@]}; i += 1 )); do
+            idx=$(( (${crc} ^ 0x${hexs[$i]}) & 0xFF ))
+            n=$(( $idx * 11 ))
+            crc=$(( ${__QNC_CRC32_TABLE:$n:10} ^ (${crc} >> 8) ))
+        done
     done
 
     crc=$(( ${crc} ^ 0xFFFFFFFF ))
@@ -103,5 +81,8 @@ function qnc_crc32_sum {
 ###crc=$(echo -n "abcd" | qnc_crc32_sum "${ctx}")
 ###echo "${crc}"
 ###ctx=$(qnc_crc32_new)
-###crc=$(echo -n "1234" | qnc_crc32_sum "${ctx}")
+###crc=$(echo -n "1234567890abcdef" | qnc_crc32_sum "${ctx}")
+###echo "${crc}"
+###ctx=$(qnc_crc32_new)
+###crc=$(echo -n "1234567890abcdefg" | qnc_crc32_sum "${ctx}")
 ###echo "${crc}"
