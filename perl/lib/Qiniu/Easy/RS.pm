@@ -56,6 +56,10 @@ my $parse_resp = sub {
     }
 
     my $body = join "", @{$resp->{body}};
+    if ($body eq q{}) {
+        return undef, $resp->{code}, $resp->{phrase};
+    }
+
     my ($val, $err2) = Qiniu::Utils::JSON::unmarshal($body);
     if (defined($err2)) {
         return undef, 499, $err2;
@@ -79,8 +83,12 @@ sub delete {
     my $key    = shift;
 
     my $url = $self->{rs_host} . uri_delete($bucket, $key);
-    my ($resp, $err) = $self->{client}->get($url);
-    return $parse_resp->($resp, $err);
+    my ($resp, $err) = $self->{client}->post(
+        $url,
+        undef,
+        "application/x-www-form-urlencoded",
+    );
+    return $parse_resp->($resp, $err), $resp;
 } # delete
 
 sub move {
@@ -112,40 +120,51 @@ sub copy {
 sub batch {
     my $self = shift;
     my $op   = shift;
+
     my $url = $self->{rs_host} . '/batch';
-    my ($resp, $err) = $self->{client}->post_form($url, {op => $op});
-    return $parse_resp->($resp, $err);
+    my $body = join("&", map {"op=$_"} @{$op});
+
+    my ($resp, $err) = $self->{client}->post(
+        $url,
+        $body,
+        q{application/x-www-form-urlencoded},
+    );
+    return $parse_resp->($resp, $err), $resp;
 } # batch
 
 sub batch_stat {
     my $self    = shift;
     my $entries = shift;
-    my $op = map { uri_stat($_->{bucket}, $_->{key}) } @{$entries};
+    my $op = [map { uri_stat($_->{bucket}, $_->{key}) } @{$entries}];
     return $self->batch($op);
 } # batch_stat
 
 sub batch_delete {
     my $self    = shift;
     my $entries = shift;
-    my $op = map { uri_delete($_->{bucket}, $_->{key}) } @{$entries};
+    my $op = [map { uri_delete($_->{bucket}, $_->{key}) } @{$entries}];
     return $self->batch($op);
 } # batch_delete
 
 sub batch_copy {
     my $self    = shift;
     my $entries = shift;
-    my $op = map {
-        uri_copy($_->{src_bucket},$_->{src_key},$_->{dst_bucket},$_->{dst_key})
-    } @{$entries};
+    my $op = [
+        map {
+            uri_copy($_->{src_bucket},$_->{src_key},$_->{dst_bucket},$_->{dst_key})
+        } @{$entries}
+    ];
     return $self->batch($op);
 } # batch_copy
 
 sub batch_move {
     my $self    = shift;
     my $entries = shift;
-    my $op = map {
-        uri_move($_->{src_bucket},$_->{src_key},$_->{dst_bucket},$_->{dst_key})
-    } @{$entries};
+    my $op = [
+        map {
+            uri_move($_->{src_bucket},$_->{src_key},$_->{dst_bucket},$_->{dst_key})
+        } @{$entries}
+    ];
     return $self->batch($op);
 } # batch_move
 
@@ -182,7 +201,7 @@ sub list {
     }
 
     my $rsf_host = $self->{rsf_host} || Qiniu::Easy::Conf::RSF_HOST;
-    my $url = "${rsf_host}/list?bucket=${bucket}";
+    my $url = "${rsf_host}/list?bucket=$ctx->{bucket}";
     if (defined($ctx->{prefix}) and $ctx->{prefix} ne "") {
         $url .= "&prefix=$ctx->{prefix}";
     }
@@ -347,6 +366,8 @@ sub token_for_access {
     my $body = $args->{body} || "";
 
     my $buf = "${path}\n${body}";
+
+    print STDERR "$buf\n";
 
     $access_key ||= Qiniu::Easy::Conf::ACCESS_KEY;
     $secret_key ||= Qiniu::Easy::Conf::SECRET_KEY;

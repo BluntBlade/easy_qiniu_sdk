@@ -49,6 +49,7 @@ my $load_body = sub {
     my $body = shift;
 
     my $body_length = 0;
+    my $reset = undef;
 
     my $body_type = ref($body);
     if ($body_type eq q{SCALAR} or $body_type eq q{}) {
@@ -151,6 +152,10 @@ my $load_body = sub {
                 }
                 return $data, undef;
             };
+            $reset = sub {
+                $body_fh->seek(0, 0);
+                $body_done = undef;
+            };
         }
 
         $body_type = ref($body);
@@ -183,6 +188,10 @@ my $load_body = sub {
             }
             return $data, undef;
         };
+        $reset = sub {
+            $body_idx = 0;
+            $body_done = undef;
+        };
 
         $body = $new_body;
         $body_type = ref($body);
@@ -194,6 +203,7 @@ my $load_body = sub {
     if ($body_length > 0) {
         $req->{body} = {
             read => $body,
+            reset => $reset,
         }
     }
     return undef;

@@ -19,8 +19,8 @@ use strict;
 use warnings;
 
 ### Qiniu hosts' domain names may be changed in the future.
-use constant UP_HOST => 'http://up.qbox.me';
-use constant RS_HOST => 'http://rs.qbox.me';
+use constant UP_HOST => 'http://up.qiniu.com';
+use constant RS_HOST => 'http://rs.qiniu.com';
 use constant RSF_HOST => 'http://rsf.qbox.me';
 
 ### Don't initialize the following constants on client sides.

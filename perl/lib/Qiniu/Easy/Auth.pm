@@ -85,7 +85,24 @@ sub sign_request {
     my $path = $req->{url}{path};
     $hmac->write($path . "\n");
     if ($inc_body) {
-        $hmac->write($req->{body});
+        my $body = $req->{body};
+        if (defined($body) and defined($body->{read})) {
+            while (1) {
+                my ($data, $err) = $body->{read}->(4096);
+                if (defined($err)) {
+                    return undef, $err;
+                }
+
+                if ($data eq q{}) {
+                    last;
+                }
+
+                $hmac->write($data);
+            } # while
+        }
+        if (defined($body->{reset})) {
+            $body->{reset}->();
+        }
     }
 
     my $digest = Qiniu::Utils::Base64::encode_url($hmac->sum());
@@ -118,14 +135,16 @@ sub new_transport {
         round_trip => sub {
             my $self = shift;
             my $req  = shift;
-            my $digest = sign_request(
-                $req,
-                $secret_key,
-                is_inc_body($req),
-            );
-            my $token = "${access_key}:${digest}";
-            $req->{headers} ||= {};
-            $req->{headers}{Authorization} = ["QBox ${token}"];
+            if (not defined($req->{headers}{Authorization})) {
+                my $digest = sign_request(
+                    $req,
+                    $secret_key,
+                    is_inc_body($req),
+                );
+                my $token = "${access_key}:${digest}";
+                $req->{headers} ||= {};
+                $req->{headers}{Authorization} = ["QBox ${token}"];
+            }
             return $self->round_trip($req);
         },
     };
