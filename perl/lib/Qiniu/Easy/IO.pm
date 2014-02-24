@@ -174,11 +174,10 @@ sub put2 {
     my $uptoken = shift;
     my $key     = shift;
     my $data    = shift;
-    my $up_host = shift;
     my $extra   = shift;
 
     ######
-    $up_host ||= Qiniu::Easy::Conf::UP_HOST;
+    my $up_host = $extra->{up_host} || Qiniu::Easy::Conf::UP_HOST;
 
     ######
     my $err       = undef;
@@ -274,14 +273,13 @@ sub put2 {
     if (defined($err2)) {
         return undef, 499, $err2;
     }
-    return $val, $resp->{code}, $resp->{phrase};
+    return $val, $resp->{code}, $resp->{phrase}, $resp;
 } # put2
 
 sub put2_file {
     my $uptoken    = shift;
     my $key        = shift;
     my $local_file = shift;
-    my $up_host    = shift;
     my $extra      = shift;
 
     my $fh = IO::File->new($local_file, "r");
@@ -290,7 +288,7 @@ sub put2_file {
     }
     $fh->binmode();
 
-    return put2($uptoken, $key, $fh, $up_host, $extra);
+    return put2($uptoken, $key, $fh, $extra);
 } # put2_file
 
 1;
